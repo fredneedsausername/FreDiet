@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template, redirect, url_for, session
 import pymysql
-from datetime import datetime
+from datetime import datetime, time
 import pytz
 from werkzeug.security import generate_password_hash, check_password_hash
 from waitress import serve
@@ -16,6 +16,15 @@ def get_db_connection():
 
 def get_italy_now():
     return datetime.now(ITALY_TZ)
+
+def timedelta_to_time(td):
+    """Convert timedelta to time object"""
+    if td is None:
+        return None
+    total_seconds = int(td.total_seconds())
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return time(hours % 24, minutes, seconds)
 
 def require_login(f):
     def decorated_function(*args, **kwargs):
@@ -114,11 +123,16 @@ def dashboard():
             """, (session['user_id'], today))
             today_meals = []
             for row in cursor.fetchall():
+                meal_time = row[3]
+                # Convert timedelta to time object if necessary
+                if hasattr(meal_time, 'total_seconds'):  # It's a timedelta
+                    meal_time = timedelta_to_time(meal_time)
+                
                 today_meals.append({
                     'id': row[0],
                     'proteins': float(row[1]),
                     'calories': float(row[2]),
-                    'meal_time': row[3]
+                    'meal_time': meal_time
                 })
             
             # Get today's totals
@@ -250,4 +264,4 @@ if __name__ == '__main__':
         case 'development':
             app.run(debug=True, host='127.0.0.1', port=passwords.flask_port)
         case _:
-            print("Please select an appropriate passwords.flask_port")        
+            print("Please select an appropriate passwords.flask_port")
