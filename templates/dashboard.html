@@ -605,7 +605,6 @@
 </head>
 <body x-data="{ 
     mealCount: {{ selected_meals|length }},
-    showSuccess: false,
     showValidationErrors: false,
     formData: {
         proteins: '',
@@ -756,13 +755,7 @@
         }
         
         this.mealCount++;
-        this.showSuccessMessage('Meal added successfully!');
         return true;
-    },
-    
-    showSuccessMessage(message) {
-        this.showSuccess = true;
-        setTimeout(() => this.showSuccess = false, 3000);
     },
     
     navigateToDate(dateString) {
@@ -951,18 +944,6 @@
                 {% endif %}
             </div>
         </div>
-    </div>
-    
-    <!-- Success notification -->
-    <div x-show="showSuccess" 
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0 transform translate-x-full"
-         x-transition:enter-end="opacity-100 transform translate-x-0"
-         x-transition:leave="transition ease-in duration-300"
-         x-transition:leave-start="opacity-100 transform translate-x-0"
-         x-transition:leave-end="opacity-0 transform translate-x-full"
-         style="position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #48dbfb, #0abde3); color: white; padding: 1rem 2rem; border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); z-index: 1000; font-weight: 600;">
-        ✅ Meal added successfully!
     </div>
 </body>
 </html>
