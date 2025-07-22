@@ -229,7 +229,7 @@
         
         .summary-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 1.5rem;
             margin-bottom: 3rem;
         }
@@ -363,7 +363,7 @@
         
         .date-range-text {
             font-weight: 600;
-            color: #333;
+            color: white;
             font-size: 1.1rem;
         }
         
@@ -435,41 +435,6 @@
             .quick-actions {
                 justify-content: center;
             }
-        }
-        
-        .insights-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin: 2rem 0;
-        }
-        
-        .insight-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            padding: 1.5rem;
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-        }
-        
-        .insight-title {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .insight-value {
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-        }
-        
-        .insight-description {
-            font-size: 0.9rem;
-            opacity: 0.8;
         }
         
         .pagination {
@@ -613,32 +578,6 @@
                 <div class="summary-title">Avg Proteins</div>
                 <div class="summary-value">{{ "%.1f"|format(avg_proteins) }}</div>
                 <div class="summary-unit">grams per day</div>
-            </div>
-            <div class="summary-card">
-                <span class="summary-icon">📈</span>
-                <div class="summary-title">Total Calories</div>
-                <div class="summary-value">{{ "%.0f"|format(total_calories) }}</div>
-                <div class="summary-unit">consumed</div>
-            </div>
-        </div>
-        
-        <div class="insights-grid" style="grid-template-columns: 1fr; justify-items: center;">
-            <div class="insight-card" style="max-width: 300px;">
-                <div class="insight-title">
-                    <span>⚡</span>
-                    Calories Per Meal
-                </div>
-                <div class="insight-value">
-                    {% set total_meals = range_data | sum(attribute='meal_count') if range_data else 0 %}
-                    {% if total_meals > 0 %}
-                        {{ "%.0f"|format(total_calories / total_meals) }}
-                    {% else %}
-                        0
-                    {% endif %}
-                </div>
-                <div class="insight-description">
-                    Average calories consumed per meal
-                </div>
             </div>
         </div>
         

@@ -201,7 +201,6 @@ def view_range():
     range_data = None
     avg_calories = 0
     avg_proteins = 0
-    total_calories = 0
     total_pages = 0
     total_days = 0
     
@@ -232,9 +231,8 @@ def view_range():
                 
                 if all_data:
                     total_days = len(all_data)
-                    total_calories = sum(day['calories'] for day in all_data)
                     total_proteins = sum(day['proteins'] for day in all_data)
-                    avg_calories = total_calories / total_days
+                    avg_calories = sum(day['calories'] for day in all_data) / total_days
                     avg_proteins = total_proteins / total_days
                     
                     # Calculate pagination
@@ -250,7 +248,6 @@ def view_range():
                          range_data=range_data,
                          avg_calories=avg_calories,
                          avg_proteins=avg_proteins,
-                         total_calories=total_calories,
                          total_days=total_days,
                          current_page=page,
                          total_pages=total_pages,
