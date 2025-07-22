@@ -100,29 +100,22 @@
             margin-bottom: 0rem;
         }
         
-        .page-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: white;
-            margin-bottom: 0.5rem;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        
-        .page-subtitle {
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 1.1rem;
-        }
-        
         .card {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
-            padding: 2.5rem;
+            padding: 1.5rem;
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             margin-bottom: 2rem;
             border: 1px solid rgba(255, 255, 255, 0.2);
             position: relative;
             overflow: hidden;
+        }
+
+        @media (min-width: 768px) {
+            .card {
+                padding: 2.5rem;
+            }
         }
         
         .card::before {
@@ -370,7 +363,6 @@
         .quick-actions {
             display: flex;
             gap: 1rem;
-            margin-top: 2rem;
             margin-bottom: 1rem;
             flex-wrap: wrap;
         }
@@ -513,10 +505,7 @@
     </div>
     
     <div class="container">
-        <div class="page-header">
-            <div class="page-title">Nutrition Analytics</div>
-            <div class="page-subtitle">Analyze your eating patterns over time</div>
-            
+        <div class="page-header">            
             <div class="quick-actions">
                 <button class="quick-btn" @click="setQuickRange(7)">Last 7 Days</button>
                 <button class="quick-btn" @click="setQuickRange(30)">Last 30 Days</button>

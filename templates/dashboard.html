@@ -95,29 +95,108 @@
             padding: 2rem;
         }
         
-        .welcome-section {
-            text-align: center;
-            margin-bottom: 3rem;
+        .date-selector {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
         }
         
-        .welcome-text {
-            font-size: 2.5rem;
+        .date-selector::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+        }
+        
+        .date-selector-title {
+            font-size: 1.2rem;
             font-weight: 700;
-            color: white;
-            margin-bottom: 0.5rem;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            color: #333;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
         }
         
-        .welcome-subtitle {
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 1.1rem;
+        .date-controls {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .date-nav-btn {
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .date-nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .date-picker-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .date-picker {
+            padding: 12px 16px;
+            border: 2px solid rgba(102, 126, 234, 0.1);
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            outline: none;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .date-picker:focus {
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .today-indicator {
+            background: linear-gradient(135deg, #48dbfb, #0abde3);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 1rem;
         }
         
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 2rem;
-            margin-bottom: 3rem;
+            margin-bottom: 2rem;
         }
         
         .stat-card {
@@ -186,13 +265,19 @@
         .card {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
-            padding: 2.5rem;
+            padding: 1.5rem;
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             margin-bottom: 2rem;
             border: 1px solid rgba(255, 255, 255, 0.2);
             position: relative;
             overflow: hidden;
+        }
+
+        @media (min-width: 768px) {
+            .card {
+                padding: 2.5rem;
+            }
         }
         
         .card::before {
@@ -245,7 +330,7 @@
             letter-spacing: 0.5px;
         }
         
-        input[type="number"], input[type="date"], input[type="time"] {
+        input[type="number"], input[type="time"] {
             padding: 12px 16px;
             border: 2px solid rgba(102, 126, 234, 0.1);
             border-radius: 12px;
@@ -256,7 +341,7 @@
             outline: none;
         }
         
-        input[type="number"]:focus, input[type="date"]:focus, input[type="time"]:focus {
+        input[type="number"]:focus, input[type="time"]:focus {
             border-color: #667eea;
             background: rgba(255, 255, 255, 1);
             box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
@@ -434,46 +519,33 @@
             .meal-item {
                 padding: 1rem;
             }
-        }
-        
-        .quick-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 2rem;
-            margin: 2rem 0;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        
-        .quick-stat {
-            text-align: center;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            color: white;
-        }
-        
-        .quick-stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-        }
-        
-        .quick-stat-label {
-            font-size: 0.8rem;
-            opacity: 0.8;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            
+            .date-controls {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .date-picker-container {
+                order: -1;
+            }
         }
     </style>
 </head>
 <body x-data="{ 
-    mealCount: {{ today_meals|length }},
+    mealCount: {{ selected_meals|length }},
     showSuccess: false,
     showSuccessMessage(message) {
         this.showSuccess = true;
         setTimeout(() => this.showSuccess = false, 3000);
+    },
+    navigateToDate(dateString) {
+        window.location.href = `{{ url_for('dashboard') }}?date=${dateString}`;
+    },
+    getDateOffset(days) {
+        const date = new Date('{{ selected_date }}');
+        date.setDate(date.getDate() + days);
+        return date.toISOString().split('T')[0];
     }
 }">
     <div class="header">
@@ -483,7 +555,7 @@
         </div>
         <div class="nav">
             <div class="user-info">
-                👋 Welcome, {{ username }}
+                👋 {{ username }}
             </div>
             <a href="{{ url_for('view_range') }}" class="nav-link">📊 View Range</a>
             <a href="{{ url_for('logout') }}" class="nav-link">🚪 Logout</a>
@@ -491,38 +563,53 @@
     </div>
     
     <div class="container">
-        <div class="welcome-section">
-            <div class="welcome-text">Your Daily Nutrition</div>
-            <div class="welcome-subtitle">Track your meals and stay healthy</div>
-            
-            <div class="quick-stats">
-                <div class="quick-stat">
-                    <div class="quick-stat-value">{{ "%.0f"|format(today_calories) }}</div>
-                    <div class="quick-stat-label">Calories</div>
+        <!-- Date Selector -->
+        <div class="date-selector">
+            <div class="date-selector-title">
+                <span>📅</span>
+                Select Date
+                {% if is_today %}
+                <span class="today-indicator">Today</span>
+                {% endif %}
+            </div>
+            <div class="date-controls">
+                <a :href="`{{ url_for('dashboard') }}?date=${getDateOffset(-1)}`" class="date-nav-btn">
+                    ← Previous Day
+                </a>
+                
+                <div class="date-picker-container">
+                    <input type="date" 
+                           class="date-picker" 
+                           value="{{ selected_date }}" 
+                           @change="navigateToDate($event.target.value)">
                 </div>
-                <div class="quick-stat">
-                    <div class="quick-stat-value">{{ "%.0f"|format(today_proteins) }}</div>
-                    <div class="quick-stat-label">Proteins (g)</div>
-                </div>
+                
+                <a :href="`{{ url_for('dashboard') }}?date=${getDateOffset(1)}`" class="date-nav-btn">
+                    Next Day →
+                </a>
             </div>
         </div>
         
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-header">
-                    <div class="stat-title">Today's Calories</div>
+                    <div class="stat-title">
+                        {% if is_today %}Today's{% else %}Daily{% endif %} Calories
+                    </div>
                     <div class="stat-icon">🔥</div>
                 </div>
-                <div class="stat-value">{{ "%.0f"|format(today_calories) }}</div>
+                <div class="stat-value">{{ "%.0f"|format(selected_calories) }}</div>
                 <div class="stat-unit">kcal consumed</div>
             </div>
             
             <div class="stat-card">
                 <div class="stat-header">
-                    <div class="stat-title">Today's Proteins</div>
+                    <div class="stat-title">
+                        {% if is_today %}Today's{% else %}Daily{% endif %} Proteins
+                    </div>
                     <div class="stat-icon">💪</div>
                 </div>
-                <div class="stat-value">{{ "%.1f"|format(today_proteins) }}</div>
+                <div class="stat-value">{{ "%.1f"|format(selected_proteins) }}</div>
                 <div class="stat-unit">grams consumed</div>
             </div>
         </div>
@@ -530,10 +617,11 @@
         <div class="card">
             <div class="card-title">
                 <span class="card-icon">➕</span>
-                Add New Meal
+                Add Meal to {{ selected_date_obj.strftime('%B %d, %Y') }}
             </div>
             <form method="POST" action="{{ url_for('add_meal') }}" 
                   @submit="mealCount++; showSuccessMessage('Meal added successfully!')">
+                <input type="hidden" name="meal_date" value="{{ selected_date }}">
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="proteins">Proteins (g)</label>
@@ -548,13 +636,9 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="meal_date">Date</label>
-                        <input type="date" id="meal_date" name="meal_date" value="{{ today_date }}" required>
-                    </div>
-                    
-                    <div class="form-group">
                         <label for="meal_time">Time</label>
-                        <input type="time" id="meal_time" name="meal_time" value="{{ current_time }}" required>
+                        <input type="time" id="meal_time" name="meal_time" 
+                               value="{% if is_today %}{{ current_time }}{% else %}12:00{% endif %}" required>
                     </div>
                     
                     <div class="form-group submit-group">
@@ -567,14 +651,11 @@
         <div class="card">
             <div class="card-title">
                 <span class="card-icon">📋</span>
-                Today's Meals
-                <span style="font-size: 0.8rem; font-weight: 400; color: #666; margin-left: auto;">
-                    {{ today_meals|length }} meal{{ 's' if today_meals|length != 1 else '' }}
-                </span>
+                Meals for {{ selected_date_obj.strftime('%B %d, %Y') }}
             </div>
             <div class="meals-list">
-                {% if today_meals %}
-                    {% for meal in today_meals %}
+                {% if selected_meals %}
+                    {% for meal in selected_meals %}
                     <div class="meal-item">
                         <div class="meal-info">
                             <div class="meal-time">{{ meal.meal_time.strftime('%H:%M') }}</div>
@@ -586,6 +667,7 @@
                         <form method="POST" action="{{ url_for('delete_meal', meal_id=meal.id) }}" 
                               style="display: inline;"
                               @submit="return confirm('Are you sure you want to delete this meal?')">
+                            <input type="hidden" name="meal_date" value="{{ selected_date }}">
                             <button type="submit" class="btn btn-danger">Delete</button>
                         </form>
                     </div>
@@ -593,7 +675,7 @@
                 {% else %}
                     <div class="empty-state">
                         <div class="empty-icon">🍽️</div>
-                        <div class="empty-text">No meals added today</div>
+                        <div class="empty-text">No meals added for this day</div>
                         <div class="empty-subtext">Add your first meal using the form above!</div>
                     </div>
                 {% endif %}

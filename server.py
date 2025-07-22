@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template, redirect, url_for, session
 import pymysql
-from datetime import datetime, time
+from datetime import datetime, time, date
 import pytz
 from werkzeug.security import generate_password_hash, check_password_hash
 from waitress import serve
@@ -111,48 +111,61 @@ def dashboard():
     now = get_italy_now()
     today = now.date()
     
+    # Get selected date from query parameter, default to today
+    selected_date_str = request.args.get('date')
+    if selected_date_str:
+        try:
+            selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            selected_date = today
+    else:
+        selected_date = today
+    
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            # Get today's meals
+            # Get selected date's meals
             cursor.execute("""
                 SELECT id, proteins, calories, meal_time 
                 FROM meals 
                 WHERE user_id = %s AND meal_date = %s 
                 ORDER BY meal_time DESC
-            """, (session['user_id'], today))
-            today_meals = []
+            """, (session['user_id'], selected_date))
+            selected_meals = []
             for row in cursor.fetchall():
                 meal_time = row[3]
                 # Convert timedelta to time object if necessary
                 if hasattr(meal_time, 'total_seconds'):  # It's a timedelta
                     meal_time = timedelta_to_time(meal_time)
                 
-                today_meals.append({
+                selected_meals.append({
                     'id': row[0],
                     'proteins': float(row[1]),
                     'calories': float(row[2]),
                     'meal_time': meal_time
                 })
             
-            # Get today's totals
+            # Get selected date's totals
             cursor.execute("""
                 SELECT COALESCE(SUM(calories), 0), COALESCE(SUM(proteins), 0)
                 FROM meals 
                 WHERE user_id = %s AND meal_date = %s
-            """, (session['user_id'], today))
-            today_calories, today_proteins = cursor.fetchone()
-            today_calories = float(today_calories)
-            today_proteins = float(today_proteins)
+            """, (session['user_id'], selected_date))
+            selected_calories, selected_proteins = cursor.fetchone()
+            selected_calories = float(selected_calories)
+            selected_proteins = float(selected_proteins)
     finally:
         conn.close()
     
     return render_template('dashboard.html',
-                         today_meals=today_meals,
-                         today_calories=today_calories,
-                         today_proteins=today_proteins,
+                         selected_meals=selected_meals,
+                         selected_calories=selected_calories,
+                         selected_proteins=selected_proteins,
+                         selected_date=selected_date.isoformat(),
+                         selected_date_obj=selected_date,
                          today_date=today.isoformat(),
                          current_time=now.strftime('%H:%M'),
+                         is_today=selected_date == today,
                          username=session['username'])
 
 @app.route('/add_meal', methods=['POST'])
@@ -160,7 +173,7 @@ def dashboard():
 def add_meal():
     proteins = float(request.form['proteins'])
     calories = float(request.form['calories'])
-    meal_date = request.form['meal_date']
+    meal_date = request.form['meal_date']  # This will be the selected date
     meal_time = request.form['meal_time']
     
     conn = get_db_connection()
@@ -174,11 +187,15 @@ def add_meal():
     finally:
         conn.close()
     
-    return redirect(url_for('dashboard'))
+    # Redirect back to the same date
+    return redirect(url_for('dashboard', date=meal_date))
 
 @app.route('/delete_meal/<int:meal_id>', methods=['POST'])
 @require_login
 def delete_meal(meal_id):
+    # Get the meal date before deleting so we can redirect back to it
+    selected_date = request.form.get('meal_date', datetime.now(ITALY_TZ).date().isoformat())
+    
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -188,7 +205,8 @@ def delete_meal(meal_id):
     finally:
         conn.close()
     
-    return redirect(url_for('dashboard'))
+    # Redirect back to the same date
+    return redirect(url_for('dashboard', date=selected_date))
 
 @app.route('/view_range')
 @require_login
