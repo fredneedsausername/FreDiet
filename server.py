@@ -1,6 +1,6 @@
-from flask import Flask, request, render_template, redirect, url_for, session, flash
+from flask import Flask, request, render_template, redirect, url_for, session
 import pymysql
-from datetime import datetime, time, date
+from datetime import datetime, time, timedelta
 import pytz
 import re
 from waitress import serve
@@ -8,6 +8,8 @@ import passwords
 
 app = Flask(__name__)
 app.secret_key = passwords.app_secret_key
+
+app.permanent_session_lifetime = timedelta(days=31)
 
 ITALY_TZ = pytz.timezone('Europe/Rome')
 
@@ -112,6 +114,7 @@ def login():
                 user = cursor.fetchone()
                 
                 if user and user[1] == password:
+                    session.permanent = True
                     session['user_id'] = user[0]
                     session['username'] = username
                     return redirect(url_for('dashboard'))
