@@ -632,7 +632,7 @@
             </div>
         </div>
         
-        <div class="card">
+        <div class="card" id="data-table-section">
             <div class="card-title">
                 <span class="card-icon">📋</span>
                 Daily Breakdown
@@ -662,7 +662,7 @@
             <div class="pagination">
                 <div class="pagination-nav">
                     {% if current_page > 1 %}
-                        <a href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ current_page - 1 }}" class="pagination-btn">
+                        <a href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ current_page - 1 }}#data-table-section" class="pagination-btn">
                             ←
                         </a>
                     {% else %}
@@ -672,7 +672,7 @@
                     {% endif %}
                     
                     {% if current_page < total_pages %}
-                        <a href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ current_page + 1 }}" class="pagination-btn">
+                        <a href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ current_page + 1 }}#data-table-section" class="pagination-btn">
                             →
                         </a>
                     {% else %}
