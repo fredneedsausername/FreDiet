@@ -12,7 +12,7 @@ The app is structured to be simple: there are accounts with logins and passwords
 
 ### Frontend
 - **Structure:** Multi Page Application
-- **Reactivity:** Alpine.js + HTMX
+- **Reactivity:** Alpine.js
 - **Styling:** CSS
 
 ### Backend
