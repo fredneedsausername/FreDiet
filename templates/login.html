@@ -193,6 +193,17 @@
             overflow: hidden;
         }
         
+        .btn:disabled {
+            background: linear-gradient(135deg, #ccc, #aaa);
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
         .btn::before {
             content: '';
             position: absolute;
@@ -204,11 +215,11 @@
             transition: left 0.5s;
         }
         
-        .btn:hover::before {
+        .btn:not(:disabled):hover::before {
             left: 100%;
         }
         
-        .btn:hover {
+        .btn:not(:disabled):hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
         }
@@ -283,18 +294,28 @@
             <div class="form-group">
                 <label for="username">Username</label>
                 <div class="input-wrapper">
-                    <input type="text" id="username" name="username" required autocomplete="username">
+                    <input type="text" 
+                           id="username" 
+                           name="username" 
+                           autocomplete="username"
+                           required>
                 </div>
             </div>
             
             <div class="form-group">
                 <label for="password">Password</label>
                 <div class="input-wrapper">
-                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                    <input type="password" 
+                           id="password" 
+                           name="password" 
+                           autocomplete="current-password"
+                           required>
                 </div>
             </div>
             
-            <button type="submit" class="btn" :disabled="loading">
+            <button type="submit" 
+                    class="btn" 
+                    :disabled="loading">
                 <span x-show="!loading">Sign In</span>
                 <span x-show="loading" class="flex items-center justify-center">
                     <span class="loading-spinner"></span>

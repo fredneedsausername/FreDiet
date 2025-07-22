@@ -1,8 +1,8 @@
-from flask import Flask, request, render_template, redirect, url_for, session
+from flask import Flask, request, render_template, redirect, url_for, session, flash
 import pymysql
 from datetime import datetime, time, date
 import pytz
-from werkzeug.security import check_password_hash
+import re
 from waitress import serve
 import passwords
 
@@ -26,6 +26,60 @@ def timedelta_to_time(td):
     minutes, seconds = divmod(remainder, 60)
     return time(hours % 24, minutes, seconds)
 
+def validate_meal_data(proteins_str, calories_str):
+    """Validate meal input data"""
+    errors = []
+    
+    # Validate proteins (max 999.9, 1 decimal place)
+    try:
+        # Remove any whitespace
+        proteins_str = proteins_str.strip()
+        
+        # Check format with regex - up to 3 digits before decimal, exactly 1 after (or no decimal)
+        protein_pattern = r'^\d{1,3}(\.\d)?$'
+        if not re.match(protein_pattern, proteins_str):
+            errors.append("Proteins must be a number with up to 3 digits before decimal and exactly 1 digit after (e.g., 25.5, 100, 999.9)")
+        else:
+            proteins = float(proteins_str)
+            if proteins < 0 or proteins > 999.9:
+                errors.append("Proteins must be between 0.0 and 999.9 grams")
+    except (ValueError, TypeError):
+        errors.append("Proteins must be a valid number")
+        proteins = None
+    
+    # Validate calories (max 9999, integers only)
+    try:
+        # Remove any whitespace
+        calories_str = calories_str.strip()
+        
+        # Check if it's a valid integer string
+        if not calories_str.isdigit():
+            errors.append("Calories must be a whole number (no decimals)")
+        else:
+            calories = int(calories_str)
+            if calories < 0 or calories > 9999:
+                errors.append("Calories must be between 0 and 9999")
+    except (ValueError, TypeError):
+        errors.append("Calories must be a valid whole number")
+        calories = None
+    
+    if errors:
+        return None, None, errors
+    
+    return proteins, calories, []
+
+def validate_user_data(username, password):
+    """Validate user input data"""
+    errors = []
+    
+    if len(username) > 12:
+        errors.append("Username must be 12 characters or fewer")
+    
+    if len(password) > 50:
+        errors.append("Password must be 50 characters or fewer")
+    
+    return errors
+
 def require_login(f):
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
@@ -47,13 +101,17 @@ def login():
         username = request.form['username']
         password = request.form['password']
         
+        validation_errors = validate_user_data(username, password)
+        if validation_errors:
+            return render_template('login.html', error="Invalid username or password")
+        
         conn = get_db_connection()
         try:
             with conn.cursor() as cursor:
-                cursor.execute("SELECT id, password_hash FROM users WHERE username = %s", (username,))
+                cursor.execute("SELECT id, password FROM users WHERE username = %s", (username,))
                 user = cursor.fetchone()
                 
-                if user and check_password_hash(user[1], password):
+                if user and user[1] == password:
                     session['user_id'] = user[0]
                     session['username'] = username
                     return redirect(url_for('dashboard'))
@@ -85,6 +143,9 @@ def dashboard():
     else:
         selected_date = today
     
+    # Get any error messages from the session
+    error_message = session.pop('error_message', None)
+    
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -105,7 +166,7 @@ def dashboard():
                 selected_meals.append({
                     'id': row[0],
                     'proteins': float(row[1]),
-                    'calories': float(row[2]),
+                    'calories': int(row[2]),
                     'meal_time': meal_time
                 })
             
@@ -130,15 +191,23 @@ def dashboard():
                          today_date=today.isoformat(),
                          current_time=now.strftime('%H:%M'),
                          is_today=selected_date == today,
-                         username=session['username'])
+                         username=session['username'],
+                         error_message=error_message)
 
 @app.route('/add_meal', methods=['POST'])
 @require_login
 def add_meal():
-    proteins = float(request.form['proteins'])
-    calories = float(request.form['calories'])
-    meal_date = request.form['meal_date']  # This will be the selected date
+    proteins_str = request.form['proteins']
+    calories_str = request.form['calories']
+    meal_date = request.form['meal_date']
     meal_time = request.form['meal_time']
+    
+    # Validate the input data
+    proteins, calories, validation_errors = validate_meal_data(proteins_str, calories_str)
+    
+    if validation_errors:
+        session['error_message'] = "; ".join(validation_errors)
+        return redirect(url_for('dashboard', date=meal_date))
     
     conn = get_db_connection()
     try:
@@ -148,6 +217,9 @@ def add_meal():
                 VALUES (%s, %s, %s, %s, %s)
             """, (session['user_id'], proteins, calories, meal_date, meal_time))
             conn.commit()
+    except Exception as e:
+        session['error_message'] = "Database error: Unable to save meal"
+        return redirect(url_for('dashboard', date=meal_date))
     finally:
         conn.close()
     
@@ -243,4 +315,4 @@ if __name__ == '__main__':
         case 'development':
             app.run(debug=True, host='127.0.0.1', port=passwords.flask_port)
         case _:
-            print("Please select an appropriate passwords.flask_port")
+            print("Please select an appropriate passwords.flask_environment")

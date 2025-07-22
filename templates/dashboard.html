@@ -331,7 +331,11 @@
             letter-spacing: 0.5px;
         }
         
-        input[type="number"], input[type="time"] {
+        .input-wrapper {
+            position: relative;
+        }
+        
+        input[type="text"], input[type="time"] {
             padding: 12px 16px;
             border: 2px solid rgba(102, 126, 234, 0.1);
             border-radius: 12px;
@@ -340,13 +344,49 @@
             background: rgba(255, 255, 255, 0.8);
             transition: all 0.3s ease;
             outline: none;
+            width: 100%;
         }
         
-        input[type="number"]:focus, input[type="time"]:focus {
+        input[type="text"]:focus, input[type="time"]:focus {
             border-color: #667eea;
             background: rgba(255, 255, 255, 1);
             box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
             transform: translateY(-2px);
+        }
+        
+        .input-error {
+            border-color: #ff6b6b !important;
+            background: rgba(255, 107, 107, 0.05) !important;
+        }
+        
+        .input-error:focus {
+            box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.1) !important;
+        }
+        
+        .validation-message {
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            min-height: 1.2rem;
+        }
+        
+        .validation-error {
+            color: #ff6b6b;
+            font-weight: 500;
+        }
+        
+        .validation-success {
+            color: #4caf50;
+            font-weight: 500;
+        }
+        
+        .input-counter {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8rem;
+            color: #666;
+            font-weight: 500;
         }
         
         .btn {
@@ -363,6 +403,17 @@
             overflow: hidden;
         }
         
+        .btn:disabled {
+            background: linear-gradient(135deg, #ccc, #aaa);
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
         .btn::before {
             content: '';
             position: absolute;
@@ -374,11 +425,11 @@
             transition: left 0.5s;
         }
         
-        .btn:hover::before {
+        .btn:not(:disabled):hover::before {
             left: 100%;
         }
         
-        .btn:hover {
+        .btn:not(:disabled):hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
         }
@@ -476,6 +527,25 @@
             opacity: 0.7;
         }
         
+        .error-alert {
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            font-weight: 500;
+            animation: shake 0.5s ease-in-out;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
         @media (max-width: 768px) {
             .header {
                 padding: 1rem;
@@ -536,13 +606,169 @@
 <body x-data="{ 
     mealCount: {{ selected_meals|length }},
     showSuccess: false,
+    showValidationErrors: false,
+    formData: {
+        proteins: '',
+        calories: '',
+        meal_time: '{% if is_today %}{{ current_time }}{% else %}12:00{% endif %}'
+    },
+    validation: {
+        proteins: { valid: true, message: '' },
+        calories: { valid: true, message: '' }
+    },
+    
+    validateProteins() {
+        const value = this.formData.proteins.trim();
+        
+        if (!value) {
+            this.validation.proteins = { valid: false, message: 'Please enter protein amount' };
+            return;
+        }
+        
+        // Check pattern: up to 3 digits, optional decimal with exactly 1 digit
+        const pattern = /^\d{1,3}(\.\d)?$/;
+        if (!pattern.test(value)) {
+            this.validation.proteins = { 
+                valid: false, 
+                message: 'Max 3 digits before decimal, 1 digit after (e.g. 25.5, 100, 999.9)' 
+            };
+            return;
+        }
+        
+        const num = parseFloat(value);
+        if (num < 0 || num > 999.9) {
+            this.validation.proteins = { 
+                valid: false, 
+                message: 'Must be between 0.0 and 999.9' 
+            };
+            return;
+        }
+        
+        this.validation.proteins = { valid: true, message: '' };
+    },
+    
+    validateCalories() {
+        const value = this.formData.calories.trim();
+        
+        if (!value) {
+            this.validation.calories = { valid: false, message: 'Please enter calorie amount' };
+            return;
+        }
+        
+        // Check if it's a whole number
+        if (!/^\d+$/.test(value)) {
+            this.validation.calories = { 
+                valid: false, 
+                message: 'Must be a whole number (no decimals)' 
+            };
+            return;
+        }
+        
+        const num = parseInt(value);
+        if (num < 0 || num > 9999) {
+            this.validation.calories = { 
+                valid: false, 
+                message: 'Must be between 0 and 9999' 
+            };
+            return;
+        }
+        
+        this.validation.calories = { valid: true, message: '' };
+    },
+    
+    filterProteinsInput(event) {
+        let value = event.target.value;
+        // Convert Italian decimal notation (comma) to standard notation (period)
+        value = value.replace(/,/g, '.');
+        // Allow only digits, one decimal point, and limit format
+        value = value.replace(/[^\d.]/g, '');
+        
+        // Prevent multiple decimal points
+        const parts = value.split('.');
+        if (parts.length > 2) {
+            value = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        // Limit to 3 digits before decimal
+        if (parts[0].length > 3) {
+            parts[0] = parts[0].substring(0, 3);
+            value = parts.join('.');
+        }
+        
+        // Limit to 1 digit after decimal
+        if (parts.length > 1 && parts[1].length > 1) {
+            parts[1] = parts[1].substring(0, 1);
+            value = parts.join('.');
+        }
+        
+        this.formData.proteins = value;
+        
+        // Reset validation error display when user starts typing again
+        if (this.showValidationErrors) {
+            this.showValidationErrors = false;
+        }
+        
+        // Still validate silently to keep internal state updated
+        this.validateProteins();
+    },
+    
+    filterCaloriesInput(event) {
+        let value = event.target.value;
+        // Allow only digits
+        value = value.replace(/[^\d]/g, '');
+        
+        // Limit to 4 digits
+        if (value.length > 4) {
+            value = value.substring(0, 4);
+        }
+        
+        this.formData.calories = value;
+        
+        // Reset validation error display when user starts typing again
+        if (this.showValidationErrors) {
+            this.showValidationErrors = false;
+        }
+        
+        // Still validate silently to keep internal state updated
+        this.validateCalories();
+    },
+    
+    hasFormContent() {
+        return this.formData.proteins.trim() || this.formData.calories.trim();
+    },
+    
+    isFormValid() {
+        return this.formData.proteins && 
+               this.formData.calories && 
+               this.validation.proteins.valid && 
+               this.validation.calories.valid;
+    },
+    
+    handleSubmit(event) {
+        this.validateProteins();
+        this.validateCalories();
+        
+        // Check if both fields have content and are valid
+        if (!this.formData.proteins.trim() || !this.formData.calories.trim() || !this.isFormValid()) {
+            event.preventDefault();
+            this.showValidationErrors = true;
+            return false;
+        }
+        
+        this.mealCount++;
+        this.showSuccessMessage('Meal added successfully!');
+        return true;
+    },
+    
     showSuccessMessage(message) {
         this.showSuccess = true;
         setTimeout(() => this.showSuccess = false, 3000);
     },
+    
     navigateToDate(dateString) {
         window.location.href = `{{ url_for('dashboard') }}?date=${dateString}`;
     },
+    
     getDateOffset(days) {
         const date = new Date('{{ selected_date }}');
         date.setDate(date.getDate() + days);
@@ -564,6 +790,13 @@
     </div>
     
     <div class="container">
+        {% if error_message %}
+        <div class="error-alert">
+            <span>⚠️</span>
+            {{ error_message }}
+        </div>
+        {% endif %}
+        
         <!-- Date Selector -->
         <div class="date-selector">
             <div class="date-selector-title">
@@ -621,29 +854,65 @@
                 Add Meal to {{ selected_date_obj.strftime('%B %d, %Y') }}
             </div>
             <form method="POST" action="{{ url_for('add_meal') }}" 
-                  @submit="mealCount++; showSuccessMessage('Meal added successfully!')">
+                  @submit="handleSubmit($event)">
                 <input type="hidden" name="meal_date" value="{{ selected_date }}">
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="proteins">Proteins (g)</label>
-                        <input type="number" id="proteins" name="proteins" step="0.1" required 
-                               placeholder="25.0">
+                        <div class="input-wrapper">
+                            <input type="text" 
+                                   id="proteins" 
+                                   name="proteins" 
+                                   x-model="formData.proteins"
+                                   @input="filterProteinsInput($event)"
+                                   :class="{ 'input-error': showValidationErrors && !validation.proteins.valid }"
+                                   placeholder="25.5"
+                                   maxlength="5"
+                                   required>
+                        </div>
+                        <div class="validation-message">
+                            <span x-show="showValidationErrors && !validation.proteins.valid"
+                                  class="validation-error"
+                                  x-text="validation.proteins.message"></span>
+                        </div>
                     </div>
                     
                     <div class="form-group">
                         <label for="calories">Calories</label>
-                        <input type="number" id="calories" name="calories" step="0.1" required 
-                               placeholder="450">
+                        <div class="input-wrapper">
+                            <input type="text" 
+                                   id="calories" 
+                                   name="calories" 
+                                   x-model="formData.calories"
+                                   @input="filterCaloriesInput($event)"
+                                   :class="{ 'input-error': showValidationErrors && !validation.calories.valid }"
+                                   placeholder="450"
+                                   maxlength="4"
+                                   required>
+                        </div>
+                        <div class="validation-message">
+                            <span x-show="showValidationErrors && !validation.calories.valid"
+                                  class="validation-error"
+                                  x-text="validation.calories.message"></span>
+                        </div>
                     </div>
                     
                     <div class="form-group">
                         <label for="meal_time">Time</label>
-                        <input type="time" id="meal_time" name="meal_time" 
-                               value="{% if is_today %}{{ current_time }}{% else %}12:00{% endif %}" required>
+                        <input type="time" 
+                               id="meal_time" 
+                               name="meal_time" 
+                               x-model="formData.meal_time"
+                               required>
+                        <div class="validation-message"></div>
                     </div>
                     
                     <div class="form-group submit-group">
-                        <button type="submit" class="btn">Add Meal</button>
+                        <button type="submit" 
+                                class="btn" 
+                                :disabled="!hasFormContent()">
+                            Add Meal
+                        </button>
                     </div>
                 </div>
             </form>
