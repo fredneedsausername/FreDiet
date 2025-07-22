@@ -2,7 +2,7 @@ from flask import Flask, request, render_template, redirect, url_for, session
 import pymysql
 from datetime import datetime, time, date
 import pytz
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash
 from waitress import serve
 import passwords
 
@@ -63,42 +63,6 @@ def login():
             conn.close()
     
     return render_template('login.html')
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        confirm_password = request.form['confirm_password']
-        
-        if password != confirm_password:
-            return render_template('register.html', error="Passwords don't match")
-        
-        conn = get_db_connection()
-        try:
-            with conn.cursor() as cursor:
-                # Check if username exists
-                cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
-                if cursor.fetchone():
-                    return render_template('register.html', error="Username already exists")
-                
-                # Create new user
-                password_hash = generate_password_hash(password)
-                cursor.execute("INSERT INTO users (username, password_hash) VALUES (%s, %s)", 
-                             (username, password_hash))
-                conn.commit()
-                
-                # Auto-login
-                cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
-                user_id = cursor.fetchone()[0]
-                session['user_id'] = user_id
-                session['username'] = username
-                
-                return redirect(url_for('dashboard'))
-        finally:
-            conn.close()
-    
-    return render_template('register.html')
 
 @app.route('/logout')
 def logout():
