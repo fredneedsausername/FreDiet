@@ -250,7 +250,7 @@ def view_range():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     page = int(request.args.get('page', 1))
-    per_page = 10  # Days per page
+    per_page = 30  # Days per page
     
     range_data = None
     avg_calories = 0
