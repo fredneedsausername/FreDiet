@@ -428,15 +428,37 @@
             .quick-actions {
                 justify-content: center;
             }
+            
+            .pagination {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .pagination-nav {
+                order: 1;
+            }
+            
+            .pagination-info {
+                order: 2;
+            }
         }
         
         .pagination {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            gap: 1.5rem;
             margin-top: 2rem;
             flex-wrap: wrap;
+            position: relative;
+        }
+        
+        .pagination-nav {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
         }
         
         .pagination-btn {
@@ -512,6 +534,7 @@
             border-radius: 20px;
             backdrop-filter: blur(10px);
             font-weight: 500;
+            margin-left: auto;
         }
     </style>
 </head>
@@ -637,31 +660,32 @@
             
             {% if total_pages > 1 %}
             <div class="pagination">
-                {% if current_page > 1 %}
-                    <a href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ current_page - 1 }}" class="pagination-btn">
-                        ←
-                    </a>
-                {% else %}
-                    <span class="pagination-btn" style="opacity: 0.3; cursor: not-allowed;">
-                        ←
-                    </span>
-                {% endif %}
-                
-                {% if current_page < total_pages %}
-                    <a href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ current_page + 1 }}" class="pagination-btn">
-                        →
-                    </a>
-                {% else %}
-                    <span class="pagination-btn" style="opacity: 0.3; cursor: not-allowed;">
-                        →
-                    </span>
-                {% endif %}
+                <div class="pagination-nav">
+                    {% if current_page > 1 %}
+                        <a href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ current_page - 1 }}" class="pagination-btn">
+                            ←
+                        </a>
+                    {% else %}
+                        <span class="pagination-btn" style="opacity: 0.3; cursor: not-allowed;">
+                            ←
+                        </span>
+                    {% endif %}
+                    
+                    {% if current_page < total_pages %}
+                        <a href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ current_page + 1 }}" class="pagination-btn">
+                            →
+                        </a>
+                    {% else %}
+                        <span class="pagination-btn" style="opacity: 0.3; cursor: not-allowed;">
+                            →
+                        </span>
+                    {% endif %}
+                </div>
 
                 <div class="pagination-info">
                     Page {{ current_page }} of {{ total_pages }} 
                     ({{ range_data|length }} of {{ total_days }} days)
                 </div>
-
             </div>
             {% endif %}
         </div>
