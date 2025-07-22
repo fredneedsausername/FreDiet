@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frediet - Create Account</title>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #4facfe 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.03)"/><circle cx="75" cy="75" r="0.5" fill="rgba(255,255,255,0.02)"/><circle cx="50" cy="10" r="0.8" fill="rgba(255,255,255,0.04)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            pointer-events: none;
+        }
+        
+        .floating-shapes {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        
+        .shape {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 8s ease-in-out infinite;
+        }
+        
+        .shape:nth-child(1) {
+            width: 100px;
+            height: 100px;
+            top: 10%;
+            right: 15%;
+            animation-delay: 0s;
+        }
+        
+        .shape:nth-child(2) {
+            width: 150px;
+            height: 150px;
+            bottom: 10%;
+            left: 10%;
+            animation-delay: 3s;
+        }
+        
+        .shape:nth-child(3) {
+            width: 80px;
+            height: 80px;
+            top: 50%;
+            left: 5%;
+            animation-delay: 6s;
+        }
+        
+        .shape:nth-child(4) {
+            width: 60px;
+            height: 60px;
+            top: 30%;
+            right: 5%;
+            animation-delay: 2s;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-15px) rotate(120deg); }
+            66% { transform: translateY(-30px) rotate(240deg); }
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 3rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 1;
+            animation: slideUp 0.8s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        
+        .logo-icon {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            display: block;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .logo-text {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .input-wrapper {
+            position: relative;
+        }
+        
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid rgba(245, 87, 108, 0.1);
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        
+        input[type="text"]:focus, input[type="password"]:focus {
+            border-color: #f5576c;
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 0 0 4px rgba(245, 87, 108, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .password-strength {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .strength-bar {
+            height: 3px;
+            background: #e1e5e9;
+            border-radius: 2px;
+            margin-top: 0.3rem;
+            overflow: hidden;
+        }
+        
+        .strength-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 2px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(245, 87, 108, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .link {
+            text-align: center;
+            margin-top: 2rem;
+        }
+        
+        .link a {
+            color: #f5576c;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .link a:hover {
+            color: #f093fb;
+            text-decoration: underline;
+        }
+        
+        .error {
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            border: none;
+            font-weight: 500;
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .requirements {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(245, 87, 108, 0.05);
+            border-radius: 8px;
+            border-left: 3px solid #f5576c;
+        }
+        
+        .requirement {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .requirement:last-child {
+            margin-bottom: 0;
+        }
+        
+        .requirement-icon {
+            margin-right: 0.5rem;
+            font-size: 0.8rem;
+        }
+        
+        .requirement.valid {
+            color: #48dbfb;
+        }
+        
+        .requirement.valid .requirement-icon {
+            color: #48dbfb;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 2rem;
+                margin: 1rem;
+            }
+            
+            .logo-text {
+                font-size: 1.8rem;
+            }
+        }
+        
+        .progress-steps {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+        
+        .step {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(245, 87, 108, 0.2);
+            margin: 0 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active {
+            background: #f5576c;
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body x-data="{ 
+    password: '', 
+    confirmPassword: '', 
+    loading: false,
+    passwordStrength: 0,
+    get passwordsMatch() { return this.password === this.confirmPassword && this.password.length > 0; },
+    get canSubmit() { return this.password.length >= 6 && this.passwordsMatch; }
+}" x-init="
+    $watch('password', (value) => {
+        let strength = 0;
+        if (value.length >= 6) strength += 25;
+        if (/[A-Z]/.test(value)) strength += 25;
+        if (/[0-9]/.test(value)) strength += 25;
+        if (/[^A-Za-z0-9]/.test(value)) strength += 25;
+        passwordStrength = strength;
+    })
+">
+    <div class="floating-shapes">
+        <div class="shape"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+    
+    <div class="container">
+        <div class="logo">
+            <span class="logo-icon">🍽️</span>
+            <div class="logo-text">Frediet</div>
+            <div class="subtitle">Join the community</div>
+        </div>
+        
+        <div class="progress-steps">
+            <div class="step active"></div>
+            <div class="step" :class="{ 'active': password.length >= 6 }"></div>
+            <div class="step" :class="{ 'active': passwordsMatch }"></div>
+        </div>
+        
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+        
+        <form method="POST" @submit="loading = true">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <div class="input-wrapper">
+                    <input type="text" id="username" name="username" required autocomplete="username">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" name="password" required 
+                           autocomplete="new-password" x-model="password">
+                </div>
+                <div class="password-strength" x-show="password.length > 0">
+                    <div class="strength-bar">
+                        <div class="strength-fill" :style="`width: ${passwordStrength}%`"></div>
+                    </div>
+                    <span x-text="passwordStrength < 50 ? 'Weak' : passwordStrength < 75 ? 'Good' : 'Strong'"></span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="confirm_password" name="confirm_password" required 
+                           autocomplete="new-password" x-model="confirmPassword">
+                </div>
+            </div>
+            
+            <div class="requirements" x-show="password.length > 0 || confirmPassword.length > 0">
+                <div class="requirement" :class="{ 'valid': password.length >= 6 }">
+                    <span class="requirement-icon">✓</span>
+                    At least 6 characters
+                </div>
+                <div class="requirement" :class="{ 'valid': passwordsMatch }">
+                    <span class="requirement-icon">✓</span>
+                    Passwords match
+                </div>
+            </div>
+            
+            <button type="submit" class="btn" :disabled="loading || !canSubmit">
+                <span x-show="!loading">Create Account</span>
+                <span x-show="loading" class="flex items-center justify-center">
+                    <span class="loading-spinner"></span>
+                    Creating account...
+                </span>
+            </button>
+        </form>
+        
+        <div class="link">
+            <a href="{{ url_for('login') }}">Already have an account? Sign in here</a>
+        </div>
+    </div>
+</body>
+</html>

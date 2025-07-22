@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frediet - Analytics</title>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 50%, #667eea 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        .logo-icon {
+            font-size: 1.8rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .nav {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        
+        .nav-link {
+            text-decoration: none;
+            color: #4facfe;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .nav-link:hover {
+            background: rgba(79, 172, 254, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .page-subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4facfe, #00f2fe, #667eea);
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        .card-icon {
+            font-size: 1.3rem;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            align-items: end;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group.submit-group {
+            display: flex;
+            align-items: end;
+        }
+        
+        label {
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        input[type="date"] {
+            padding: 12px 16px;
+            border: 2px solid rgba(79, 172, 254, 0.1);
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        
+        input[type="date"]:focus {
+            border-color: #4facfe;
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 0 0 4px rgba(79, 172, 254, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .summary-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(79, 172, 254, 0.3);
+        }
+        
+        .summary-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            transform: rotate(45deg);
+        }
+        
+        .summary-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        
+        .summary-title {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.9;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .summary-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        
+        .summary-unit {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(79, 172, 254, 0.1);
+        }
+        
+        .data-table th {
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1));
+            font-weight: 700;
+            color: #333;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .data-table tbody tr {
+            transition: all 0.3s ease;
+        }
+        
+        .data-table tbody tr:hover {
+            background: rgba(79, 172, 254, 0.05);
+            transform: scale(1.01);
+        }
+        
+        .data-table td {
+            font-weight: 500;
+        }
+        
+        .data-table .number {
+            font-weight: 600;
+            color: #4facfe;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #666;
+        }
+        
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .empty-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .empty-subtext {
+            opacity: 0.7;
+        }
+        
+        .date-range-display {
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1));
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            text-align: center;
+            border: 2px solid rgba(79, 172, 254, 0.2);
+        }
+        
+        .date-range-text {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .quick-btn {
+            padding: 0.8rem 1.5rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        
+        .quick-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .nav {
+                gap: 1rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
+            .page-title {
+                font-size: 2rem;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .data-table {
+                font-size: 0.9rem;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 0.75rem 0.5rem;
+            }
+            
+            .quick-actions {
+                justify-content: center;
+            }
+        }
+        
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .insight-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .insight-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .insight-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        
+        .insight-description {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .pagination-btn {
+            padding: 0.7rem 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .pagination-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            color: white;
+        }
+        
+        .pagination-btn.active {
+            background: rgba(255, 255, 255, 0.9);
+            color: #4facfe;
+            font-weight: 700;
+        }
+        
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .pagination-info {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            margin: 0 1rem;
+        }
+    </style>
+</head>
+<body x-data="{ 
+    loading: false,
+    setQuickRange(days) {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - days);
+        
+        document.getElementById('start_date').value = start.toISOString().split('T')[0];
+        document.getElementById('end_date').value = end.toISOString().split('T')[0];
+        
+        this.loading = true;
+        document.querySelector('form').submit();
+    }
+}">
+    <div class="header">
+        <div class="logo">
+            <span class="logo-icon">📊</span>
+            <div class="logo-text">Frediet Analytics</div>
+        </div>
+        <div class="nav">
+            <div class="user-info">
+                👋 {{ username }}
+            </div>
+            <a href="{{ url_for('dashboard') }}" class="nav-link">🏠 Dashboard</a>
+            <a href="{{ url_for('logout') }}" class="nav-link">🚪 Logout</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="page-header">
+            <div class="page-title">Nutrition Analytics</div>
+            <div class="page-subtitle">Analyze your eating patterns over time</div>
+            
+            <div class="quick-actions">
+                <button class="quick-btn" @click="setQuickRange(7)">Last 7 Days</button>
+                <button class="quick-btn" @click="setQuickRange(30)">Last 30 Days</button>
+                <button class="quick-btn" @click="setQuickRange(90)">Last 3 Months</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">
+                <span class="card-icon">📅</span>
+                Select Date Range
+            </div>
+            <form method="GET" @submit="loading = true">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="start_date">Start Date</label>
+                        <input type="date" id="start_date" name="start_date" value="{{ start_date or '' }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="end_date">End Date</label>
+                        <input type="date" id="end_date" name="end_date" value="{{ end_date or '' }}">
+                    </div>
+                    
+                    <div class="form-group submit-group">
+                        <button type="submit" class="btn" :disabled="loading">
+                            <span x-show="!loading">Analyze Range</span>
+                            <span x-show="loading">Analyzing...</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        {% if start_date and end_date %}
+        <div class="date-range-display">
+            <div class="date-range-text">
+                📊 Analysis for {{ start_date }} to {{ end_date }}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if range_data %}
+        <div class="summary-grid">
+            <div class="summary-card">
+                <span class="summary-icon">📅</span>
+                <div class="summary-title">Total Days</div>
+                <div class="summary-value">{{ total_days }}</div>
+                <div class="summary-unit">days tracked</div>
+            </div>
+            <div class="summary-card">
+                <span class="summary-icon">🔥</span>
+                <div class="summary-title">Avg Calories</div>
+                <div class="summary-value">{{ "%.0f"|format(avg_calories) }}</div>
+                <div class="summary-unit">per day</div>
+            </div>
+            <div class="summary-card">
+                <span class="summary-icon">💪</span>
+                <div class="summary-title">Avg Proteins</div>
+                <div class="summary-value">{{ "%.1f"|format(avg_proteins) }}</div>
+                <div class="summary-unit">grams per day</div>
+            </div>
+            <div class="summary-card">
+                <span class="summary-icon">📈</span>
+                <div class="summary-title">Total Calories</div>
+                <div class="summary-value">{{ "%.0f"|format(total_calories) }}</div>
+                <div class="summary-unit">consumed</div>
+            </div>
+        </div>
+        
+        <div class="insights-grid" style="grid-template-columns: 1fr; justify-items: center;">
+            <div class="insight-card" style="max-width: 300px;">
+                <div class="insight-title">
+                    <span>⚡</span>
+                    Calories Per Meal
+                </div>
+                <div class="insight-value">
+                    {% set total_meals = range_data | sum(attribute='meal_count') if range_data else 0 %}
+                    {% if total_meals > 0 %}
+                        {{ "%.0f"|format(total_calories / total_meals) }}
+                    {% else %}
+                        0
+                    {% endif %}
+                </div>
+                <div class="insight-description">
+                    Average calories consumed per meal
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">
+                <span class="card-icon">📋</span>
+                Daily Breakdown
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Calories</th>
+                        <th>Proteins (g)</th>
+                        <th>Meals</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day in range_data %}
+                    <tr>
+                        <td>{{ day.date.strftime('%a, %b %d') }}</td>
+                        <td class="number">{{ "%.0f"|format(day.calories) }}</td>
+                        <td class="number">{{ "%.1f"|format(day.proteins) }}</td>
+                        <td class="number">{{ day.meal_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            {% if total_pages > 1 %}
+            <div class="pagination">
+                {% if current_page > 1 %}
+                    <a href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ current_page - 1 }}" class="pagination-btn">
+                        ← Prev
+                    </a>
+                {% endif %}
+                
+                {% for page_num in range(1, total_pages + 1) %}
+                    {% if page_num == current_page %}
+                        <span class="pagination-btn active">{{ page_num }}</span>
+                    {% elif page_num <= 3 or page_num > total_pages - 3 or (page_num >= current_page - 1 and page_num <= current_page + 1) %}
+                        <a href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ page_num }}" class="pagination-btn">
+                            {{ page_num }}
+                        </a>
+                    {% elif page_num == 4 and current_page > 6 %}
+                        <span class="pagination-btn" style="cursor: default;">...</span>
+                    {% elif page_num == total_pages - 3 and current_page < total_pages - 5 %}
+                        <span class="pagination-btn" style="cursor: default;">...</span>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if current_page < total_pages %}
+                    <a href="?start_date={{ start_date }}&end_date={{ end_date }}&page={{ current_page + 1 }}" class="pagination-btn">
+                        Next →
+                    </a>
+                {% endif %}
+            </div>
+            
+            <div style="text-align: center; margin-top: 1rem;">
+                <div class="pagination-info">
+                    Showing page {{ current_page }} of {{ total_pages }} 
+                    ({{ range_data|length }} of {{ total_days }} days)
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% elif start_date and end_date %}
+        <div class="card">
+            <div class="empty-state">
+                <div class="empty-icon">📊</div>
+                <div class="empty-text">No data found for this period</div>
+                <div class="empty-subtext">Try selecting a different date range or add some meals to your dashboard</div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="empty-state">
+                <div class="empty-icon">📅</div>
+                <div class="empty-text">Select a date range to view analytics</div>
+                <div class="empty-subtext">Choose start and end dates above to analyze your nutrition patterns</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frediet - Dashboard</title>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        .logo-icon {
+            font-size: 1.8rem;
+            animation: rotate 8s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .nav {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        
+        .nav-link {
+            text-decoration: none;
+            color: #667eea;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .nav-link:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .welcome-text {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .welcome-subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+        }
+        
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-icon {
+            font-size: 1.5rem;
+            padding: 0.5rem;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-unit {
+            font-size: 1rem;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #f093fb, #f5576c, #4facfe);
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        .card-icon {
+            font-size: 1.3rem;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.5rem;
+            align-items: end;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group.submit-group {
+            display: flex;
+            align-items: end;
+        }
+        
+        label {
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        input[type="number"], input[type="date"], input[type="time"] {
+            padding: 12px 16px;
+            border: 2px solid rgba(102, 126, 234, 0.1);
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        
+        input[type="number"]:focus, input[type="date"]:focus, input[type="time"]:focus {
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            font-size: 0.8rem;
+            padding: 6px 12px;
+        }
+        
+        .btn-danger:hover {
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+        
+        .meals-list {
+            margin-top: 2rem;
+        }
+        
+        .meal-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 16px;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .meal-item:hover {
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .meal-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        
+        .meal-info {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+        
+        .meal-time {
+            color: #666;
+            font-weight: 600;
+            font-size: 0.9rem;
+            min-width: 60px;
+        }
+        
+        .meal-values {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .meal-value {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #666;
+        }
+        
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .empty-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        
+        .empty-subtext {
+            margin-top: 0.5rem;
+            opacity: 0.7;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .nav {
+                gap: 1rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
+            .welcome-text {
+                font-size: 2rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .meal-info {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            
+            .meal-values {
+                gap: 0.5rem;
+                flex-wrap: wrap;
+            }
+            
+            .meal-item {
+                padding: 1rem;
+            }
+        }
+        
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            margin: 2rem 0;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .quick-stat {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+        }
+        
+        .quick-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        
+        .quick-stat-label {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body x-data="{ 
+    mealCount: {{ today_meals|length }},
+    showSuccess: false,
+    showSuccessMessage(message) {
+        this.showSuccess = true;
+        setTimeout(() => this.showSuccess = false, 3000);
+    }
+}">
+    <div class="header">
+        <div class="logo">
+            <span class="logo-icon">🍽️</span>
+            <div class="logo-text">Frediet</div>
+        </div>
+        <div class="nav">
+            <div class="user-info">
+                👋 Welcome, {{ username }}
+            </div>
+            <a href="{{ url_for('view_range') }}" class="nav-link">📊 View Range</a>
+            <a href="{{ url_for('logout') }}" class="nav-link">🚪 Logout</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="welcome-section">
+            <div class="welcome-text">Your Daily Nutrition</div>
+            <div class="welcome-subtitle">Track your meals and stay healthy</div>
+            
+            <div class="quick-stats">
+                <div class="quick-stat">
+                    <div class="quick-stat-value">{{ "%.0f"|format(today_calories) }}</div>
+                    <div class="quick-stat-label">Calories</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="quick-stat-value">{{ "%.0f"|format(today_proteins) }}</div>
+                    <div class="quick-stat-label">Proteins (g)</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Today's Calories</div>
+                    <div class="stat-icon">🔥</div>
+                </div>
+                <div class="stat-value">{{ "%.0f"|format(today_calories) }}</div>
+                <div class="stat-unit">kcal consumed</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Today's Proteins</div>
+                    <div class="stat-icon">💪</div>
+                </div>
+                <div class="stat-value">{{ "%.1f"|format(today_proteins) }}</div>
+                <div class="stat-unit">grams consumed</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">
+                <span class="card-icon">➕</span>
+                Add New Meal
+            </div>
+            <form method="POST" action="{{ url_for('add_meal') }}" 
+                  @submit="mealCount++; showSuccessMessage('Meal added successfully!')">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="proteins">Proteins (g)</label>
+                        <input type="number" id="proteins" name="proteins" step="0.1" required 
+                               placeholder="25.0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="calories">Calories</label>
+                        <input type="number" id="calories" name="calories" step="0.1" required 
+                               placeholder="450">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="meal_date">Date</label>
+                        <input type="date" id="meal_date" name="meal_date" value="{{ today_date }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="meal_time">Time</label>
+                        <input type="time" id="meal_time" name="meal_time" value="{{ current_time }}" required>
+                    </div>
+                    
+                    <div class="form-group submit-group">
+                        <button type="submit" class="btn">Add Meal</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">
+                <span class="card-icon">📋</span>
+                Today's Meals
+                <span style="font-size: 0.8rem; font-weight: 400; color: #666; margin-left: auto;">
+                    {{ today_meals|length }} meal{{ 's' if today_meals|length != 1 else '' }}
+                </span>
+            </div>
+            <div class="meals-list">
+                {% if today_meals %}
+                    {% for meal in today_meals %}
+                    <div class="meal-item">
+                        <div class="meal-info">
+                            <div class="meal-time">{{ meal.meal_time.strftime('%H:%M') }}</div>
+                            <div class="meal-values">
+                                <span class="meal-value">💪 {{ meal.proteins }}g</span>
+                                <span class="meal-value">🔥 {{ meal.calories }} cal</span>
+                            </div>
+                        </div>
+                        <form method="POST" action="{{ url_for('delete_meal', meal_id=meal.id) }}" 
+                              style="display: inline;"
+                              @submit="return confirm('Are you sure you want to delete this meal?')">
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-icon">🍽️</div>
+                        <div class="empty-text">No meals added today</div>
+                        <div class="empty-subtext">Add your first meal using the form above!</div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Success notification -->
+    <div x-show="showSuccess" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform translate-x-full"
+         x-transition:enter-end="opacity-100 transform translate-x-0"
+         x-transition:leave="transition ease-in duration-300"
+         x-transition:leave-start="opacity-100 transform translate-x-0"
+         x-transition:leave-end="opacity-0 transform translate-x-full"
+         style="position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #48dbfb, #0abde3); color: white; padding: 1rem 2rem; border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); z-index: 1000; font-weight: 600;">
+        ✅ Meal added successfully!
+    </div>
+</body>
+</html>
