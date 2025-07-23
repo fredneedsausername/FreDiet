@@ -700,13 +700,25 @@
                         this.formData.calories = '';
                         this.formData.meal_time = '{% if is_today %}{{ current_time }}{% else %}12:00{% endif %}';
                     } else {
-                        this.fieldErrors = data.field_errors || {};
-                        this.showValidationErrors = true;
+                        const fieldErrors = data.field_errors || {};
+                        
+                        // Handle individual field errors with validation system
+                        if (fieldErrors.proteins || fieldErrors.calories) {
+                            this.fieldErrors = { 
+                                proteins: fieldErrors.proteins, 
+                                calories: fieldErrors.calories 
+                            };
+                            this.showValidationErrors = true;
+                        }
+                        
+                        // Handle general errors with alerts
+                        if (fieldErrors.general) {
+                            alert('Error: ' + fieldErrors.general);
+                        }
                     }
                 } catch (error) {
                     console.error('Error adding meal:', error);
-                    this.fieldErrors = { general: 'Network error. Please try again.' };
-                    this.showValidationErrors = true;
+                    alert('Network error. Please try again.');
                 } finally {
                     this.submitting = false;
                 }
