@@ -413,6 +413,12 @@
             cursor: not-allowed !important;
             pointer-events: none !important;
         }
+
+        .delete-meal-button-deleting {
+            background: linear-gradient(135deg, #ccc, #aaa) !important;
+            cursor: not-allowed !important;
+            pointer-events: none !important;
+        }
         
         .btn:not(:disabled) {
             background: linear-gradient(135deg, #667eea, #764ba2);
@@ -437,17 +443,6 @@
         .btn:not(:disabled):hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        
-        .btn-danger {
-            background: linear-gradient(135deg, #ff6b6b, #feca57);
-            font-size: 0.8rem;
-            padding: 6px 12px;
-            cursor: pointer;
-        }
-        
-        .btn-danger:hover {
-            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
         }
         
         .meals-list {
@@ -608,172 +603,157 @@
             }
         }
     </style>
+    <script>
+        window.dashboardData = {
+            meals: {{ selected_meals|tojson|safe }},
+            totalCalories: {{ selected_calories }},
+            totalProteins: {{ selected_proteins }},
+            formData: {
+                proteins: '',
+                calories: '',
+                meal_time: '{% if is_today %}{{ current_time }}{% else %}12:00{% endif %}'
+            },
+            showValidationErrors: false,
+            fieldErrors: {},
+            submitting: false,
+            deleting: {},
+            
+            filterProteinsInput(event) {
+                let value = event.target.value;
+                value = value.replace(/,/g, '.');
+                value = value.replace(/[^\d.]/g, '');
+                
+                const parts = value.split('.');
+                if (parts.length > 2) {
+                    value = parts[0] + '.' + parts.slice(1).join('');
+                }
+                
+                if (parts[0].length > 3) {
+                    parts[0] = parts[0].substring(0, 3);
+                    value = parts.join('.');
+                }
+                
+                if (parts.length > 1 && parts[1].length > 1) {
+                    parts[1] = parts[1].substring(0, 1);
+                    value = parts.join('.');
+                }
+                
+                this.formData.proteins = value;
+                this.clearValidationErrors();
+            },
+            
+            filterCaloriesInput(event) {
+                let value = event.target.value;
+                value = value.replace(/[^\d]/g, '');
+                
+                if (value.length > 4) {
+                    value = value.substring(0, 4);
+                }
+                
+                this.formData.calories = value;
+                this.clearValidationErrors();
+            },
+            
+            clearValidationErrors() {
+                if (this.showValidationErrors) {
+                    this.showValidationErrors = false;
+                    this.fieldErrors = {};
+                }
+            },
+            
+            hasFormContent() {
+                return this.formData.proteins.trim() || this.formData.calories.trim();
+            },
+            
+            async addMeal(event) {
+                event.preventDefault();
+                
+                if (this.submitting) return;
+                
+                this.submitting = true;
+                this.showValidationErrors = false;
+                this.fieldErrors = {};
+                
+                const formData = new FormData();
+                formData.append('proteins', this.formData.proteins);
+                formData.append('calories', this.formData.calories);
+                formData.append('meal_date', '{{ selected_date }}');
+                formData.append('meal_time', this.formData.meal_time);
+                
+                try {
+                    const response = await fetch('/api/add_meal', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.meals.unshift(data.meal);
+                        this.totalCalories = data.updated_totals.calories;
+                        this.totalProteins = data.updated_totals.proteins;
+                        
+                        this.formData.proteins = '';
+                        this.formData.calories = '';
+                        this.formData.meal_time = '{% if is_today %}{{ current_time }}{% else %}12:00{% endif %}';
+                    } else {
+                        this.fieldErrors = data.field_errors || {};
+                        this.showValidationErrors = true;
+                    }
+                } catch (error) {
+                    console.error('Error adding meal:', error);
+                    this.fieldErrors = { general: 'Network error. Please try again.' };
+                    this.showValidationErrors = true;
+                } finally {
+                    this.submitting = false;
+                }
+            },
+            
+            async deleteMeal(mealId, mealProteins, mealCalories) {
+                if (this.deleting[mealId]) return;
+                
+                this.deleting[mealId] = true;
+                
+                const formData = new FormData();
+                formData.append('meal_date', '{{ selected_date }}');
+                
+                try {
+                    const response = await fetch('/api/delete_meal/' + mealId, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.meals = this.meals.filter(meal => meal.id !== mealId);
+                        this.totalCalories = data.updated_totals.calories;
+                        this.totalProteins = data.updated_totals.proteins;
+                    } else {
+                        console.error('Error deleting meal:', data.error);
+                        alert('Error deleting meal. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error deleting meal:', error);
+                    alert('Network error. Please try again.');
+                } finally {
+                    delete this.deleting[mealId];
+                }
+            },
+            
+            navigateToDate(dateString) {
+                window.location.href = '{{ url_for("dashboard") }}?date=' + dateString;
+            },
+            
+            getDateOffset(days) {
+                const date = new Date('{{ selected_date }}');
+                date.setDate(date.getDate() + days);
+                return date.toISOString().split('T')[0];
+            }
+        };
+    </script>
 </head>
-<body x-data="{ 
-    mealCount: {{ selected_meals|length }},
-    showValidationErrors: false,
-    formData: {
-        proteins: '',
-        calories: '',
-        meal_time: '{% if is_today %}{{ current_time }}{% else %}12:00{% endif %}'
-    },
-    validation: {
-        proteins: { valid: true, message: '' },
-        calories: { valid: true, message: '' }
-    },
-    
-    validateProteins() {
-        const value = this.formData.proteins.trim();
-        
-        if (!value) {
-            this.validation.proteins = { valid: false, message: 'Please enter protein amount' };
-            return;
-        }
-        
-        // Check pattern: up to 3 digits, optional decimal with exactly 1 digit
-        const pattern = /^\d{1,3}(\.\d)?$/;
-        if (!pattern.test(value)) {
-            this.validation.proteins = { 
-                valid: false, 
-                message: 'Max 3 digits before decimal, 1 digit after (e.g. 25.5, 100, 999.9)' 
-            };
-            return;
-        }
-        
-        const num = parseFloat(value);
-        if (num < 0 || num > 999.9) {
-            this.validation.proteins = { 
-                valid: false, 
-                message: 'Must be between 0.0 and 999.9' 
-            };
-            return;
-        }
-        
-        this.validation.proteins = { valid: true, message: '' };
-    },
-    
-    validateCalories() {
-        const value = this.formData.calories.trim();
-        
-        if (!value) {
-            this.validation.calories = { valid: false, message: 'Please enter calorie amount' };
-            return;
-        }
-        
-        // Check if it's a whole number
-        if (!/^\d+$/.test(value)) {
-            this.validation.calories = { 
-                valid: false, 
-                message: 'Must be a whole number (no decimals)' 
-            };
-            return;
-        }
-        
-        const num = parseInt(value);
-        if (num < 0 || num > 9999) {
-            this.validation.calories = { 
-                valid: false, 
-                message: 'Must be between 0 and 9999' 
-            };
-            return;
-        }
-        
-        this.validation.calories = { valid: true, message: '' };
-    },
-    
-    filterProteinsInput(event) {
-        let value = event.target.value;
-        // Convert Italian decimal notation (comma) to standard notation (period)
-        value = value.replace(/,/g, '.');
-        // Allow only digits, one decimal point, and limit format
-        value = value.replace(/[^\d.]/g, '');
-        
-        // Prevent multiple decimal points
-        const parts = value.split('.');
-        if (parts.length > 2) {
-            value = parts[0] + '.' + parts.slice(1).join('');
-        }
-        
-        // Limit to 3 digits before decimal
-        if (parts[0].length > 3) {
-            parts[0] = parts[0].substring(0, 3);
-            value = parts.join('.');
-        }
-        
-        // Limit to 1 digit after decimal
-        if (parts.length > 1 && parts[1].length > 1) {
-            parts[1] = parts[1].substring(0, 1);
-            value = parts.join('.');
-        }
-        
-        this.formData.proteins = value;
-        
-        // Reset validation error display when user starts typing again
-        if (this.showValidationErrors) {
-            this.showValidationErrors = false;
-        }
-        
-        // Still validate silently to keep internal state updated
-        this.validateProteins();
-    },
-    
-    filterCaloriesInput(event) {
-        let value = event.target.value;
-        // Allow only digits
-        value = value.replace(/[^\d]/g, '');
-        
-        // Limit to 4 digits
-        if (value.length > 4) {
-            value = value.substring(0, 4);
-        }
-        
-        this.formData.calories = value;
-        
-        // Reset validation error display when user starts typing again
-        if (this.showValidationErrors) {
-            this.showValidationErrors = false;
-        }
-        
-        // Still validate silently to keep internal state updated
-        this.validateCalories();
-    },
-    
-    hasFormContent() {
-        return this.formData.proteins.trim() || this.formData.calories.trim();
-    },
-    
-    isFormValid() {
-        return this.formData.proteins && 
-               this.formData.calories && 
-               this.validation.proteins.valid && 
-               this.validation.calories.valid;
-    },
-    
-    handleSubmit(event) {
-        this.validateProteins();
-        this.validateCalories();
-        
-        // Check if both fields have content and are valid
-        if (!this.formData.proteins.trim() || !this.formData.calories.trim() || !this.isFormValid()) {
-            event.preventDefault();
-            this.showValidationErrors = true;
-            return false;
-        }
-        
-        this.mealCount++;
-        return true;
-    },
-    
-    navigateToDate(dateString) {
-        window.location.href = `{{ url_for('dashboard') }}?date=${dateString}`;
-    },
-    
-    getDateOffset(days) {
-        const date = new Date('{{ selected_date }}');
-        date.setDate(date.getDate() + days);
-        return date.toISOString().split('T')[0];
-    }
-}">
+<body x-data="window.dashboardData">
     <div class="header">
         <div class="logo">
             <span class="logo-icon">🍽️</span>
@@ -789,13 +769,6 @@
     </div>
     
     <div class="container">
-        {% if error_message %}
-        <div class="error-alert">
-            <span>⚠️</span>
-            {{ error_message }}
-        </div>
-        {% endif %}
-        
         <!-- Date Selector -->
         <div class="date-selector">
             <div class="date-selector-title">
@@ -831,7 +804,7 @@
                     </div>
                     <div class="stat-icon">🔥</div>
                 </div>
-                <div class="stat-value">{{ "%.0f"|format(selected_calories) }}</div>
+                <div class="stat-value" x-text="Math.round(totalCalories)"></div>
                 <div class="stat-unit">kcal consumed</div>
             </div>
             
@@ -842,7 +815,7 @@
                     </div>
                     <div class="stat-icon">💪</div>
                 </div>
-                <div class="stat-value">{{ "%.1f"|format(selected_proteins) }}</div>
+                <div class="stat-value" x-text="totalProteins.toFixed(1)"></div>
                 <div class="stat-unit">grams consumed</div>
             </div>
         </div>
@@ -852,27 +825,24 @@
                 <span class="card-icon">➕</span>
                 Add Meal to {{ selected_date_obj.strftime('%B %d, %Y') }}
             </div>
-            <form method="POST" action="{{ url_for('add_meal') }}" 
-                  @submit="handleSubmit($event)">
-                <input type="hidden" name="meal_date" value="{{ selected_date }}">
+            <form @submit="addMeal($event)">
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="proteins">Proteins (g)</label>
                         <div class="input-wrapper">
                             <input type="text" 
                                    id="proteins" 
-                                   name="proteins" 
                                    x-model="formData.proteins"
                                    @input="filterProteinsInput($event)"
-                                   :class="{ 'input-error': showValidationErrors && !validation.proteins.valid }"
+                                   :class="{ 'input-error': showValidationErrors && fieldErrors.proteins }"
                                    placeholder="25.5"
                                    maxlength="5"
-                                   required>
+                                   :disabled="submitting">
                         </div>
                         <div class="validation-message">
-                            <span x-show="showValidationErrors && !validation.proteins.valid"
+                            <span x-show="showValidationErrors && fieldErrors.proteins"
                                   class="validation-error"
-                                  x-text="validation.proteins.message"></span>
+                                  x-text="fieldErrors.proteins"></span>
                         </div>
                     </div>
                     
@@ -881,18 +851,17 @@
                         <div class="input-wrapper">
                             <input type="text" 
                                    id="calories" 
-                                   name="calories" 
                                    x-model="formData.calories"
                                    @input="filterCaloriesInput($event)"
-                                   :class="{ 'input-error': showValidationErrors && !validation.calories.valid }"
+                                   :class="{ 'input-error': showValidationErrors && fieldErrors.calories }"
                                    placeholder="450"
                                    maxlength="4"
-                                   required>
+                                   :disabled="submitting">
                         </div>
                         <div class="validation-message">
-                            <span x-show="showValidationErrors && !validation.calories.valid"
+                            <span x-show="showValidationErrors && fieldErrors.calories"
                                   class="validation-error"
-                                  x-text="validation.calories.message"></span>
+                                  x-text="fieldErrors.calories"></span>
                         </div>
                     </div>
                     
@@ -900,9 +869,8 @@
                         <label for="meal_time">Time</label>
                         <input type="time" 
                                id="meal_time" 
-                               name="meal_time" 
                                x-model="formData.meal_time"
-                               required>
+                               :disabled="submitting">
                         <div class="validation-message"></div>
                     </div>
                     
@@ -910,8 +878,9 @@
                         <button type="submit" 
                                 class="btn" 
                                 x-cloak
-                                :disabled="!hasFormContent()">
-                            Add Meal
+                                :disabled="!hasFormContent() || submitting">
+                            <span x-show="!submitting">Add Meal</span>
+                            <span x-show="submitting">Adding...</span>
                         </button>
                     </div>
                 </div>
@@ -924,31 +893,29 @@
                 Meals for {{ selected_date_obj.strftime('%B %d, %Y') }}
             </div>
             <div class="meals-list">
-                {% if selected_meals %}
-                    {% for meal in selected_meals %}
+                <template x-for="meal in meals" :key="meal.id">
                     <div class="meal-item">
                         <div class="meal-info">
-                            <div class="meal-time">{{ meal.meal_time.strftime('%H:%M') }}</div>
+                            <div class="meal-time" x-text="meal.formatted_time"></div>
                             <div class="meal-values">
-                                <span class="meal-value">💪 {{ meal.proteins }}g</span>
-                                <span class="meal-value">🔥 {{ meal.calories }} cal</span>
+                                <span class="meal-value">💪 <span x-text="meal.proteins"></span>g</span>
+                                <span class="meal-value">🔥 <span x-text="meal.calories"></span> cal</span>
                             </div>
                         </div>
-                        <form method="POST" action="{{ url_for('delete_meal', meal_id=meal.id) }}" 
-                              style="display: inline;"
-                              @submit="return confirm('Are you sure you want to delete this meal?')">
-                            <input type="hidden" name="meal_date" value="{{ selected_date }}">
-                            <button type="submit" class="btn btn-danger">Delete</button>
-                        </form>
+                        <button @click="deleteMeal(meal.id, meal.proteins, meal.calories)"
+                                class="btn"
+                                :class="deleting[meal.id] ? 'delete-meal-button-deleting' : 'btn'">
+                            <span x-show="!deleting[meal.id]">Delete</span>
+                            <span x-show="deleting[meal.id]">Deleting...</span>
+                        </button>
                     </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="empty-state">
-                        <div class="empty-icon">🍽️</div>
-                        <div class="empty-text">No meals added for this day</div>
-                        <div class="empty-subtext">Add your first meal using the form above!</div>
-                    </div>
-                {% endif %}
+                </template>
+                
+                <div x-show="meals.length === 0" class="empty-state">
+                    <div class="empty-icon">🍽️</div>
+                    <div class="empty-text">No meals added for this day</div>
+                    <div class="empty-subtext">Add your first meal using the form above!</div>
+                </div>
             </div>
         </div>
     </div>

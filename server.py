@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for, session
+from flask import Flask, request, render_template, redirect, url_for, session, jsonify
 import pymysql
 from datetime import datetime, time, timedelta
 import pytz
@@ -30,7 +30,7 @@ def timedelta_to_time(td):
 
 def validate_meal_data(proteins_str, calories_str):
     """Validate meal input data"""
-    errors = []
+    errors = {}
     
     # Validate proteins (max 999.9, 1 decimal place)
     try:
@@ -40,13 +40,13 @@ def validate_meal_data(proteins_str, calories_str):
         # Check format with regex - up to 3 digits before decimal, exactly 1 after (or no decimal)
         protein_pattern = r'^\d{1,3}(\.\d)?$'
         if not re.match(protein_pattern, proteins_str):
-            errors.append("Proteins must be a number with up to 3 digits before decimal and exactly 1 digit after (e.g., 25.5, 100, 999.9)")
+            errors["proteins"] = "Max 3 digits before decimal, 1 digit after (e.g. 25.5, 100, 999.9)"
         else:
             proteins = float(proteins_str)
             if proteins < 0 or proteins > 999.9:
-                errors.append("Proteins must be between 0.0 and 999.9 grams")
+                errors["proteins"] = "Must be between 0.0 and 999.9"
     except (ValueError, TypeError):
-        errors.append("Proteins must be a valid number")
+        errors["proteins"] = "Must be a valid number"
         proteins = None
     
     # Validate calories (max 9999, integers only)
@@ -56,19 +56,19 @@ def validate_meal_data(proteins_str, calories_str):
         
         # Check if it's a valid integer string
         if not calories_str.isdigit():
-            errors.append("Calories must be a whole number (no decimals)")
+            errors["calories"] = "Must be a whole number (no decimals)"
         else:
             calories = int(calories_str)
             if calories < 0 or calories > 9999:
-                errors.append("Calories must be between 0 and 9999")
+                errors["calories"] = "Must be between 0 and 9999"
     except (ValueError, TypeError):
-        errors.append("Calories must be a valid whole number")
+        errors["calories"] = "Must be a valid whole number"
         calories = None
     
     if errors:
         return None, None, errors
     
-    return proteins, calories, []
+    return proteins, calories, {}
 
 def validate_user_data(username, password):
     """Validate user input data"""
@@ -146,9 +146,6 @@ def dashboard():
     else:
         selected_date = today
     
-    # Get any error messages from the session
-    error_message = session.pop('error_message', None)
-    
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -170,7 +167,7 @@ def dashboard():
                     'id': row[0],
                     'proteins': float(row[1]),
                     'calories': int(row[2]),
-                    'meal_time': meal_time
+                    'formatted_time': meal_time.strftime('%H:%M') if meal_time else '00:00'
                 })
             
             # Get selected date's totals
@@ -194,12 +191,12 @@ def dashboard():
                          today_date=today.isoformat(),
                          current_time=now.strftime('%H:%M'),
                          is_today=selected_date == today,
-                         username=session['username'],
-                         error_message=error_message)
+                         username=session['username'])
 
-@app.route('/add_meal', methods=['POST'])
+# NEW API ENDPOINTS
+@app.route('/api/add_meal', methods=['POST'])
 @require_login
-def add_meal():
+def api_add_meal():
     proteins_str = request.form['proteins']
     calories_str = request.form['calories']
     meal_date = request.form['meal_date']
@@ -209,8 +206,10 @@ def add_meal():
     proteins, calories, validation_errors = validate_meal_data(proteins_str, calories_str)
     
     if validation_errors:
-        session['error_message'] = "; ".join(validation_errors)
-        return redirect(url_for('dashboard', date=meal_date))
+        return jsonify({
+            "success": False,
+            "field_errors": validation_errors
+        }), 400
     
     conn = get_db_connection()
     try:
@@ -219,33 +218,96 @@ def add_meal():
                 INSERT INTO meals (user_id, proteins, calories, meal_date, meal_time) 
                 VALUES (%s, %s, %s, %s, %s)
             """, (session['user_id'], proteins, calories, meal_date, meal_time))
+            
+            # Get the inserted meal ID
+            meal_id = cursor.lastrowid
             conn.commit()
+            
+            # Get updated totals for the date
+            cursor.execute("""
+                SELECT COALESCE(SUM(calories), 0), COALESCE(SUM(proteins), 0)
+                FROM meals 
+                WHERE user_id = %s AND meal_date = %s
+            """, (session['user_id'], meal_date))
+            total_calories, total_proteins = cursor.fetchone()
+            
+            # Format the time for display
+            time_obj = datetime.strptime(meal_time, '%H:%M').time()
+            
+            return jsonify({
+                "success": True,
+                "meal": {
+                    "id": meal_id,
+                    "proteins": float(proteins),
+                    "calories": int(calories),
+                    "meal_time": meal_time,
+                    "formatted_time": time_obj.strftime('%H:%M')
+                },
+                "updated_totals": {
+                    "calories": float(total_calories),
+                    "proteins": float(total_proteins)
+                }
+            })
     except Exception as e:
-        session['error_message'] = "Database error: Unable to save meal"
-        return redirect(url_for('dashboard', date=meal_date))
+        return jsonify({
+            "success": False,
+            "field_errors": {"general": "Database error: Unable to save meal"}
+        }), 500
     finally:
         conn.close()
-    
-    # Redirect back to the same date
-    return redirect(url_for('dashboard', date=meal_date))
 
-@app.route('/delete_meal/<int:meal_id>', methods=['POST'])
+@app.route('/api/delete_meal/<int:meal_id>', methods=['POST'])
 @require_login
-def delete_meal(meal_id):
-    # Get the meal date before deleting so we can redirect back to it
-    selected_date = request.form.get('meal_date', datetime.now(ITALY_TZ).date().isoformat())
+def api_delete_meal(meal_id):
+    meal_date = request.form.get('meal_date')
     
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
+            # Get meal data before deleting (for totals calculation)
+            cursor.execute("SELECT proteins, calories FROM meals WHERE id = %s AND user_id = %s", 
+                         (meal_id, session['user_id']))
+            meal_data = cursor.fetchone()
+            
+            if not meal_data:
+                return jsonify({
+                    "success": False,
+                    "error": "Meal not found"
+                }), 404
+            
+            deleted_proteins, deleted_calories = meal_data
+            
+            # Delete the meal
             cursor.execute("DELETE FROM meals WHERE id = %s AND user_id = %s", 
                          (meal_id, session['user_id']))
             conn.commit()
+            
+            # Get updated totals for the date
+            cursor.execute("""
+                SELECT COALESCE(SUM(calories), 0), COALESCE(SUM(proteins), 0)
+                FROM meals 
+                WHERE user_id = %s AND meal_date = %s
+            """, (session['user_id'], meal_date))
+            total_calories, total_proteins = cursor.fetchone()
+            
+            return jsonify({
+                "success": True,
+                "deleted_meal": {
+                    "proteins": float(deleted_proteins),
+                    "calories": float(deleted_calories)
+                },
+                "updated_totals": {
+                    "calories": float(total_calories),
+                    "proteins": float(total_proteins)
+                }
+            })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": "Database error: Unable to delete meal"
+        }), 500
     finally:
         conn.close()
-    
-    # Redirect back to the same date
-    return redirect(url_for('dashboard', date=selected_date))
 
 @app.route('/view_range')
 @require_login
