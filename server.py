@@ -193,7 +193,6 @@ def dashboard():
                          is_today=selected_date == today,
                          username=session['username'])
 
-# NEW API ENDPOINTS
 @app.route('/api/add_meal', methods=['POST'])
 @require_login
 def api_add_meal():

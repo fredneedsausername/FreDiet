@@ -406,6 +406,9 @@
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .btn[x-cloak] {
@@ -904,7 +907,7 @@
                         </div>
                         <button @click="deleteMeal(meal.id, meal.proteins, meal.calories)"
                                 class="btn"
-                                :class="deleting[meal.id] ? 'delete-meal-button-deleting' : 'btn'">
+                                :class="deleting[meal.id] ? 'btn delete-meal-button-deleting' : 'btn'">
                             <span x-show="!deleting[meal.id]">Delete</span>
                             <span x-show="deleting[meal.id]">Deleting...</span>
                         </button>
