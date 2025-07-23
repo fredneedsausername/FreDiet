@@ -138,17 +138,22 @@
         .date-nav-btn {
             padding: 12px 16px;
             background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
+            color: white !important;
             border: none;
             border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
+            text-decoration: none !important;
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+        
+        .date-nav-btn[x-cloak] {
+            color: white !important;
+            text-decoration: none !important;
+            pointer-events: none;
         }
         
         .date-nav-btn:hover {
@@ -391,30 +396,30 @@
         
         .btn {
             padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #ccc, #aaa);
             color: white;
             border: 2px solid transparent;
             border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
-            cursor: pointer;
+            cursor: not-allowed;
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
         }
         
-        .btn:disabled {
-            background: linear-gradient(135deg, #ccc, #aaa);
-            cursor: not-allowed;
-            transform: none;
+        .btn[x-cloak] {
+            background: linear-gradient(135deg, #ccc, #aaa) !important;
+            cursor: not-allowed !important;
+            pointer-events: none !important;
         }
         
-        .btn:disabled:hover {
-            transform: none;
-            box-shadow: none;
+        .btn:not(:disabled) {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            cursor: pointer;
         }
         
-        .btn::before {
+        .btn:not(:disabled)::before {
             content: '';
             position: absolute;
             top: 0;
@@ -438,6 +443,7 @@
             background: linear-gradient(135deg, #ff6b6b, #feca57);
             font-size: 0.8rem;
             padding: 6px 12px;
+            cursor: pointer;
         }
         
         .btn-danger:hover {
@@ -800,7 +806,7 @@
                 {% endif %}
             </div>
             <div class="date-controls">
-                <a :href="`{{ url_for('dashboard') }}?date=${getDateOffset(-1)}`" class="date-nav-btn">
+                <a :href="`{{ url_for('dashboard') }}?date=${getDateOffset(-1)}`" class="date-nav-btn" x-cloak style="color: white;">
                     ← Previous Day
                 </a>
                 
@@ -811,7 +817,7 @@
                            @change="navigateToDate($event.target.value)">
                 </div>
                 
-                <a :href="`{{ url_for('dashboard') }}?date=${getDateOffset(1)}`" class="date-nav-btn">
+                <a :href="`{{ url_for('dashboard') }}?date=${getDateOffset(1)}`" class="date-nav-btn" x-cloak style="color: white;">
                     Next Day →
                 </a>
             </div>
@@ -903,6 +909,7 @@
                     <div class="form-group submit-group">
                         <button type="submit" 
                                 class="btn" 
+                                x-cloak
                                 :disabled="!hasFormContent()">
                             Add Meal
                         </button>
