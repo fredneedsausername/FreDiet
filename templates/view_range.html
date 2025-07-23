@@ -281,13 +281,44 @@
             opacity: 0.8;
         }
         
+        /* Table container for horizontal scrolling */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 1rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.5);
+            /* Add smooth scrolling */
+            scroll-behavior: smooth;
+            /* Style the scrollbar */
+            scrollbar-width: thin;
+            scrollbar-color: rgba(79, 172, 254, 0.3) rgba(255, 255, 255, 0.1);
+        }
+        
+        .table-container::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .table-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb {
+            background: rgba(79, 172, 254, 0.3);
+            border-radius: 4px;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(79, 172, 254, 0.5);
+        }
+        
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 1rem;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 12px;
-            overflow: hidden;
+            background: transparent;
+            /* Set minimum width to prevent squishing */
+            min-width: 480px;
         }
         
         .data-table th,
@@ -295,6 +326,7 @@
             padding: 1rem;
             text-align: left;
             border-bottom: 1px solid rgba(79, 172, 254, 0.1);
+            white-space: nowrap;
         }
         
         .data-table th {
@@ -304,6 +336,9 @@
             font-size: 0.9rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 1;
         }
         
         .data-table tbody tr {
@@ -312,7 +347,6 @@
         
         .data-table tbody tr:hover {
             background: rgba(79, 172, 254, 0.05);
-            transform: scale(1.01);
         }
         
         .data-table td {
@@ -322,6 +356,68 @@
         .data-table .number {
             font-weight: 600;
             color: #4facfe;
+        }
+        
+        /* Mobile card layout for very small screens */
+        .mobile-cards {
+            display: none;
+        }
+        
+        .day-card {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(79, 172, 254, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .day-card:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .day-card-header {
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(79, 172, 254, 0.1);
+        }
+        
+        .day-card-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            text-align: center;
+        }
+        
+        .day-card-stat {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .day-card-stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #4facfe;
+        }
+        
+        .day-card-stat-label {
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 0.25rem;
+        }
+        
+        .scroll-hint {
+            text-align: center;
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            opacity: 0.7;
         }
         
         .empty-state {
@@ -384,63 +480,6 @@
         .quick-btn:hover {
             background: rgba(255, 255, 255, 0.3);
             transform: translateY(-2px);
-        }
-        
-        @media (max-width: 768px) {
-            .header {
-                padding: 1rem;
-                flex-direction: column;
-                gap: 1rem;
-                text-align: center;
-            }
-            
-            .nav {
-                gap: 1rem;
-            }
-            
-            .container {
-                padding: 1rem;
-            }
-            
-            .page-title {
-                font-size: 2rem;
-            }
-            
-            .summary-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-            
-            .form-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-            
-            .data-table {
-                font-size: 0.9rem;
-            }
-            
-            .data-table th,
-            .data-table td {
-                padding: 0.75rem 0.5rem;
-            }
-            
-            .quick-actions {
-                justify-content: center;
-            }
-            
-            .pagination {
-                flex-direction: column;
-                gap: 1rem;
-            }
-            
-            .pagination-nav {
-                order: 1;
-            }
-            
-            .pagination-info {
-                order: 2;
-            }
         }
         
         .pagination {
@@ -535,6 +574,83 @@
             backdrop-filter: blur(10px);
             font-weight: 500;
             margin-left: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .nav {
+                gap: 1rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
+            .page-title {
+                font-size: 2rem;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .quick-actions {
+                justify-content: center;
+            }
+            
+            .pagination {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .pagination-nav {
+                order: 1;
+                position: static;
+                transform: none;
+            }
+            
+            .pagination-info {
+                order: 2;
+                margin-left: 0;
+            }
+            
+            /* Better mobile table experience */
+            .data-table th,
+            .data-table td {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.9rem;
+            }
+            
+            .scroll-hint {
+                display: block;
+            }
+        }
+        
+        /* For very small screens, show card layout instead */
+        @media (max-width: 480px) {
+            .table-container {
+                display: none;
+            }
+            
+            .mobile-cards {
+                display: block;
+            }
+            
+            .scroll-hint {
+                display: none;
+            }
         }
     </style>
 </head>
@@ -637,26 +753,59 @@
                 <span class="card-icon">📋</span>
                 Daily Breakdown
             </div>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Calories</th>
-                        <th>Proteins (g)</th>
-                        <th>Meals</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for day in range_data %}
-                    <tr>
-                        <td>{{ day.date.strftime('%a, %b %d') }}</td>
-                        <td class="number">{{ "%.0f"|format(day.calories) }}</td>
-                        <td class="number">{{ "%.1f"|format(day.proteins) }}</td>
-                        <td class="number">{{ day.meal_count }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            
+            <!-- Desktop/Tablet Table View -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Calories</th>
+                            <th>Proteins (g)</th>
+                            <th>Meals</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for day in range_data %}
+                        <tr>
+                            <td>{{ day.date.strftime('%a, %b %d') }}</td>
+                            <td class="number">{{ "%.0f"|format(day.calories) }}</td>
+                            <td class="number">{{ "%.1f"|format(day.proteins) }}</td>
+                            <td class="number">{{ day.meal_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="scroll-hint">
+                👆 Scroll horizontally to see all columns
+            </div>
+            
+            <!-- Mobile Card View (for very small screens) -->
+            <div class="mobile-cards">
+                {% for day in range_data %}
+                <div class="day-card">
+                    <div class="day-card-header">
+                        {{ day.date.strftime('%a, %b %d') }}
+                    </div>
+                    <div class="day-card-stats">
+                        <div class="day-card-stat">
+                            <div class="day-card-stat-value">{{ "%.0f"|format(day.calories) }}</div>
+                            <div class="day-card-stat-label">Calories</div>
+                        </div>
+                        <div class="day-card-stat">
+                            <div class="day-card-stat-value">{{ "%.1f"|format(day.proteins) }}</div>
+                            <div class="day-card-stat-label">Proteins (g)</div>
+                        </div>
+                        <div class="day-card-stat">
+                            <div class="day-card-stat-value">{{ day.meal_count }}</div>
+                            <div class="day-card-stat-label">Meals</div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
             
             {% if total_pages > 1 %}
             <div class="pagination">
