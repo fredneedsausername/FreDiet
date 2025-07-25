@@ -21,8 +21,8 @@ The app is structured to be simple: there are accounts with logins and passwords
 - **Auth:** Cookies
 
 ### Database
-- **DBMS:** MySQL
-- **Connector:** PyMySQL
+- **DBMS:** SQLite
+- **Connector:** Python's default SQLite connector
 
 ### Production
 - **Server:** Waitress
