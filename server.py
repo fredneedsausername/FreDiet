@@ -1,5 +1,5 @@
-from flask import Flask, request, render_template, redirect, url_for, session, jsonify
-import pymysql
+from flask import Flask, request, render_template, redirect, url_for, session, jsonify, g
+import sqlite3
 from datetime import datetime, time, timedelta
 import pytz
 import re
@@ -14,7 +14,20 @@ app.permanent_session_lifetime = timedelta(days=31)
 ITALY_TZ = pytz.timezone('Europe/Rome')
 
 def get_db_connection():
-    return pymysql.connect(**passwords.DB_CONFIG)
+    """Get database connection using Flask's g object for per-request connections."""
+    if 'db' not in g:
+        g.db = sqlite3.connect(passwords.DB_FILE_PATH, timeout=30.0)
+        g.db.row_factory = sqlite3.Row  # Enable dict-like access to rows
+        # Enable foreign key constraints
+        g.db.execute("PRAGMA foreign_keys = ON")
+    return g.db
+
+@app.teardown_appcontext
+def close_db(error):
+    """Close database connection at the end of each request."""
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 def get_italy_now():
     return datetime.now(ITALY_TZ)
@@ -82,6 +95,22 @@ def validate_user_data(username, password):
     
     return errors
 
+def validate_date_time(meal_date, meal_time):
+    """Validate date and time format for SQLite"""
+    errors = {}
+    
+    # Validate date format (YYYY-MM-DD)
+    date_pattern = r'^\d{4}-\d{2}-\d{2}$'
+    if not re.match(date_pattern, meal_date):
+        errors["meal_date"] = "Invalid date format, must be YYYY-MM-DD"
+    
+    # Validate time format (HH:MM)
+    time_pattern = r'^\d{2}:\d{2}$'
+    if not re.match(time_pattern, meal_time):
+        errors["meal_time"] = "Invalid time format, must be HH:MM"
+    
+    return errors
+
 def require_login(f):
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
@@ -109,19 +138,20 @@ def login():
         
         conn = get_db_connection()
         try:
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT id, password FROM users WHERE username = %s", (username,))
-                user = cursor.fetchone()
-                
-                if user and user[1] == password:
-                    session.permanent = True
-                    session['user_id'] = user[0]
-                    session['username'] = username
-                    return redirect(url_for('dashboard'))
-                else:
-                    return render_template('login.html', error="Invalid username or password")
-        finally:
-            conn.close()
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, password FROM users WHERE username = ?", (username,))
+            user = cursor.fetchone()
+            
+            if user and user['password'] == password:
+                session.permanent = True
+                session['user_id'] = user['id']
+                session['username'] = username
+                return redirect(url_for('dashboard'))
+            else:
+                return render_template('login.html', error="Invalid username or password")
+        except sqlite3.Error as e:
+            app.logger.error(f"Database error during login: {e}")
+            return render_template('login.html', error="Database error: Unable to process login")
     
     return render_template('login.html')
 
@@ -148,39 +178,49 @@ def dashboard():
     
     conn = get_db_connection()
     try:
-        with conn.cursor() as cursor:
-            # Get selected date's meals
-            cursor.execute("""
-                SELECT id, proteins, calories, meal_time 
-                FROM meals 
-                WHERE user_id = %s AND meal_date = %s 
-                ORDER BY meal_time DESC
-            """, (session['user_id'], selected_date))
-            selected_meals = []
-            for row in cursor.fetchall():
-                meal_time = row[3]
-                # Convert timedelta to time object if necessary
-                if hasattr(meal_time, 'total_seconds'):  # It's a timedelta
-                    meal_time = timedelta_to_time(meal_time)
+        cursor = conn.cursor()
+        # Get selected date's meals
+        cursor.execute("""
+            SELECT id, proteins, calories, meal_time 
+            FROM meals 
+            WHERE user_id = ? AND meal_date = ? 
+            ORDER BY meal_time DESC
+        """, (session['user_id'], selected_date.isoformat()))
+        
+        selected_meals = []
+        for row in cursor.fetchall():
+            meal_time = row['meal_time']
+            # Parse time string back to time object for formatting
+            try:
+                time_obj = datetime.strptime(meal_time, '%H:%M').time()
+                formatted_time = time_obj.strftime('%H:%M')
                 
                 selected_meals.append({
-                    'id': row[0],
-                    'proteins': float(row[1]),
-                    'calories': int(row[2]),
-                    'formatted_time': meal_time.strftime('%H:%M') if meal_time else '00:00'
+                    'id': row['id'],
+                    'proteins': float(row['proteins']),
+                    'calories': int(row['calories']),
+                    'formatted_time': formatted_time
                 })
-            
-            # Get selected date's totals
-            cursor.execute("""
-                SELECT COALESCE(SUM(calories), 0), COALESCE(SUM(proteins), 0)
-                FROM meals 
-                WHERE user_id = %s AND meal_date = %s
-            """, (session['user_id'], selected_date))
-            selected_calories, selected_proteins = cursor.fetchone()
-            selected_calories = float(selected_calories)
-            selected_proteins = float(selected_proteins)
-    finally:
-        conn.close()
+            except ValueError:
+                app.logger.warning(f"Skipping meal ID {row['id']} with corrupt time format: '{meal_time}' for user {session['user_id']}")
+                continue
+        
+        # Get selected date's totals
+        cursor.execute("""
+            SELECT COALESCE(SUM(calories), 0), COALESCE(SUM(proteins), 0)
+            FROM meals 
+            WHERE user_id = ? AND meal_date = ?
+        """, (session['user_id'], selected_date.isoformat()))
+        totals = cursor.fetchone()
+        selected_calories = float(totals[0])
+        selected_proteins = float(totals[1])
+        
+    except sqlite3.Error as e:
+        app.logger.error(f"Database error in dashboard: {e}")
+        # Provide fallback data to prevent page crash
+        selected_meals = []
+        selected_calories = 0.0
+        selected_proteins = 0.0
     
     return render_template('dashboard.html',
                          selected_meals=selected_meals,
@@ -210,50 +250,65 @@ def api_add_meal():
             "field_errors": validation_errors
         }), 400
     
+    # Validate date and time formats
+    datetime_errors = validate_date_time(meal_date, meal_time)
+    if datetime_errors:
+        return jsonify({
+            "success": False,
+            "field_errors": datetime_errors
+        }), 400
+    
     conn = get_db_connection()
     try:
-        with conn.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO meals (user_id, proteins, calories, meal_date, meal_time) 
-                VALUES (%s, %s, %s, %s, %s)
-            """, (session['user_id'], proteins, calories, meal_date, meal_time))
-            
-            # Get the inserted meal ID
-            meal_id = cursor.lastrowid
-            conn.commit()
-            
-            # Get updated totals for the date
-            cursor.execute("""
-                SELECT COALESCE(SUM(calories), 0), COALESCE(SUM(proteins), 0)
-                FROM meals 
-                WHERE user_id = %s AND meal_date = %s
-            """, (session['user_id'], meal_date))
-            total_calories, total_proteins = cursor.fetchone()
-            
-            # Format the time for display
-            time_obj = datetime.strptime(meal_time, '%H:%M').time()
-            
-            return jsonify({
-                "success": True,
-                "meal": {
-                    "id": meal_id,
-                    "proteins": float(proteins),
-                    "calories": int(calories),
-                    "meal_time": meal_time,
-                    "formatted_time": time_obj.strftime('%H:%M')
-                },
-                "updated_totals": {
-                    "calories": float(total_calories),
-                    "proteins": float(total_proteins)
-                }
-            })
-    except Exception as e:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO meals (user_id, proteins, calories, meal_date, meal_time) 
+            VALUES (?, ?, ?, ?, ?)
+        """, (session['user_id'], proteins, calories, meal_date, meal_time))
+        
+        # Get the inserted meal ID
+        meal_id = cursor.lastrowid
+        conn.commit()
+        
+        # Get updated totals for the date
+        cursor.execute("""
+            SELECT COALESCE(SUM(calories), 0), COALESCE(SUM(proteins), 0)
+            FROM meals 
+            WHERE user_id = ? AND meal_date = ?
+        """, (session['user_id'], meal_date))
+        totals = cursor.fetchone()
+        total_calories = float(totals[0])
+        total_proteins = float(totals[1])
+        
+        # Format the time for display
+        time_obj = datetime.strptime(meal_time, '%H:%M').time()
+        
+        return jsonify({
+            "success": True,
+            "meal": {
+                "id": meal_id,
+                "proteins": float(proteins),
+                "calories": int(calories),
+                "meal_time": meal_time,
+                "formatted_time": time_obj.strftime('%H:%M')
+            },
+            "updated_totals": {
+                "calories": total_calories,
+                "proteins": total_proteins
+            }
+        })
+    except sqlite3.IntegrityError as e:
+        app.logger.error(f"Database integrity error adding meal: {e}")
+        return jsonify({
+            "success": False,
+            "field_errors": {"general": "Database error: Invalid data provided"}
+        }), 400
+    except sqlite3.Error as e:
+        app.logger.error(f"Database error adding meal: {e}")
         return jsonify({
             "success": False,
             "field_errors": {"general": "Database error: Unable to save meal"}
         }), 500
-    finally:
-        conn.close()
 
 @app.route('/api/delete_meal/<int:meal_id>', methods=['POST'])
 @require_login
@@ -262,51 +317,53 @@ def api_delete_meal(meal_id):
     
     conn = get_db_connection()
     try:
-        with conn.cursor() as cursor:
-            # Get meal data before deleting (for totals calculation)
-            cursor.execute("SELECT proteins, calories FROM meals WHERE id = %s AND user_id = %s", 
-                         (meal_id, session['user_id']))
-            meal_data = cursor.fetchone()
-            
-            if not meal_data:
-                return jsonify({
-                    "success": False,
-                    "error": "Meal not found"
-                }), 404
-            
-            deleted_proteins, deleted_calories = meal_data
-            
-            # Delete the meal
-            cursor.execute("DELETE FROM meals WHERE id = %s AND user_id = %s", 
-                         (meal_id, session['user_id']))
-            conn.commit()
-            
-            # Get updated totals for the date
-            cursor.execute("""
-                SELECT COALESCE(SUM(calories), 0), COALESCE(SUM(proteins), 0)
-                FROM meals 
-                WHERE user_id = %s AND meal_date = %s
-            """, (session['user_id'], meal_date))
-            total_calories, total_proteins = cursor.fetchone()
-            
+        cursor = conn.cursor()
+        # Get meal data before deleting (for totals calculation)
+        cursor.execute("SELECT proteins, calories FROM meals WHERE id = ? AND user_id = ?", 
+                     (meal_id, session['user_id']))
+        meal_data = cursor.fetchone()
+        
+        if not meal_data:
             return jsonify({
-                "success": True,
-                "deleted_meal": {
-                    "proteins": float(deleted_proteins),
-                    "calories": float(deleted_calories)
-                },
-                "updated_totals": {
-                    "calories": float(total_calories),
-                    "proteins": float(total_proteins)
-                }
-            })
-    except Exception as e:
+                "success": False,
+                "error": "Meal not found"
+            }), 404
+        
+        deleted_proteins = float(meal_data['proteins'])
+        deleted_calories = float(meal_data['calories'])
+        
+        # Delete the meal
+        cursor.execute("DELETE FROM meals WHERE id = ? AND user_id = ?", 
+                     (meal_id, session['user_id']))
+        conn.commit()
+        
+        # Get updated totals for the date
+        cursor.execute("""
+            SELECT COALESCE(SUM(calories), 0), COALESCE(SUM(proteins), 0)
+            FROM meals 
+            WHERE user_id = ? AND meal_date = ?
+        """, (session['user_id'], meal_date))
+        totals = cursor.fetchone()
+        total_calories = float(totals[0])
+        total_proteins = float(totals[1])
+        
+        return jsonify({
+            "success": True,
+            "deleted_meal": {
+                "proteins": deleted_proteins,
+                "calories": deleted_calories
+            },
+            "updated_totals": {
+                "calories": total_calories,
+                "proteins": total_proteins
+            }
+        })
+    except sqlite3.Error as e:
+        app.logger.error(f"Database error deleting meal: {e}")
         return jsonify({
             "success": False,
             "error": "Database error: Unable to delete meal"
         }), 500
-    finally:
-        conn.close()
 
 @app.route('/view_range')
 @require_login
@@ -325,40 +382,50 @@ def view_range():
     if start_date and end_date:
         conn = get_db_connection()
         try:
-            with conn.cursor() as cursor:
-                # Get summary statistics (all data for averages)
-                cursor.execute("""
-                    SELECT meal_date, 
-                           SUM(calories) as total_calories, 
-                           SUM(proteins) as total_proteins,
-                           COUNT(*) as meal_count
-                    FROM meals 
-                    WHERE user_id = %s AND meal_date BETWEEN %s AND %s
-                    GROUP BY meal_date
-                    ORDER BY meal_date DESC
-                """, (session['user_id'], start_date, end_date))
-                
-                all_data = []
-                for row in cursor.fetchall():
-                    all_data.append({
-                        'date': row[0],
-                        'calories': float(row[1]),
-                        'proteins': float(row[2]),
-                        'meal_count': row[3]
-                    })
-                
-                if all_data:
-                    total_days = len(all_data)
-                    total_proteins = sum(day['proteins'] for day in all_data)
-                    avg_calories = sum(day['calories'] for day in all_data) / total_days
-                    avg_proteins = total_proteins / total_days
+            cursor = conn.cursor()
+            # Get summary statistics (all data for averages)
+            cursor.execute("""
+                SELECT meal_date, 
+                       SUM(calories) as total_calories, 
+                       SUM(proteins) as total_proteins,
+                       COUNT(*) as meal_count
+                FROM meals 
+                WHERE user_id = ? AND meal_date BETWEEN ? AND ?
+                GROUP BY meal_date
+                ORDER BY meal_date DESC
+            """, (session['user_id'], start_date, end_date))
+            
+            all_data = []
+            for row in cursor.fetchall():
+                # Parse the date string back to a date object
+                try:
+                    date_obj = datetime.strptime(row['meal_date'], '%Y-%m-%d').date()
                     
-                    # Calculate pagination
-                    total_pages = (total_days + per_page - 1) // per_page
-                    offset = (page - 1) * per_page
-                    range_data = all_data[offset:offset + per_page]
-        finally:
-            conn.close()
+                    all_data.append({
+                        'date': date_obj,
+                        'calories': float(row['total_calories']),
+                        'proteins': float(row['total_proteins']),
+                        'meal_count': row['meal_count']
+                    })
+                except ValueError:
+                    app.logger.warning(f"Skipping date record with corrupt date format: '{row['meal_date']}' for user {session['user_id']}")
+                    continue
+            
+            if all_data:
+                total_days = len(all_data)
+                total_proteins = sum(day['proteins'] for day in all_data)
+                avg_calories = sum(day['calories'] for day in all_data) / total_days
+                avg_proteins = total_proteins / total_days
+                
+                # Calculate pagination
+                total_pages = (total_days + per_page - 1) // per_page
+                offset = (page - 1) * per_page
+                range_data = all_data[offset:offset + per_page]
+                
+        except sqlite3.Error as e:
+            app.logger.error(f"Database error in view_range: {e}")
+            # Provide fallback empty data
+            range_data = None
     
     return render_template('view_range.html',
                          start_date=start_date,

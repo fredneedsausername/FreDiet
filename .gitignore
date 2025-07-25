@@ -208,3 +208,5 @@ __marimo__/
 
 # Custom
 passwords.py
+frediet.db
+sqlite3.exe
