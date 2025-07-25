@@ -1,22 +1,118 @@
 from flask import Flask, request, render_template, redirect, url_for, session, jsonify, g
 import sqlite3
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, timezone
 import pytz
 import re
+import os
+import sys
+import logging
+import json
 from waitress import serve
-import passwords
+
+DB_FILE_PATH = "/app/data/frediet.db"
+
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        log_entry = {
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'level': record.levelname,
+            'logger': record.name,
+            'message': record.getMessage(),
+            'module': record.module,
+            'function': record.funcName,
+            'line': record.lineno
+        }
+        if record.exc_info:
+            log_entry['exception'] = self.formatException(record.exc_info)
+        return json.dumps(log_entry)
+
+# Configure logging for Docker capture
+def setup_logging():
+    # Remove any existing handlers
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    
+    # Create JSON formatter
+    json_formatter = JSONFormatter()
+    
+    # Stdout handler for application logs
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(json_formatter)
+    stdout_handler.setLevel(logging.INFO)
+    
+    # Stderr handler for errors
+    stderr_handler = logging.StreamHandler(sys.stderr)
+    stderr_handler.setFormatter(json_formatter)
+    stderr_handler.setLevel(logging.ERROR)
+    
+    # Configure root logger
+    logging.root.setLevel(logging.INFO)
+    logging.root.addHandler(stdout_handler)
+    logging.root.addHandler(stderr_handler)
+
+# Set up logging for the the whole backend
+setup_logging()
+logger = logging.getLogger(__name__)
+
+def validate_config():
+    """Validate all required environment variables. Crash if any are missing/invalid."""
+    errors = []
+    
+    # Required secret key
+    secret_key = os.getenv('FLASK_SECRET_KEY')
+    if not secret_key:
+        errors.append("FLASK_SECRET_KEY must be set (cannot be empty)")
+    
+    # Required port
+    port_str = os.getenv('FLASK_PORT')
+    if not port_str:
+        errors.append("FLASK_PORT must be set")
+    else:
+        try:
+            port = int(port_str)
+            if not (1 <= port <= 65535):
+                errors.append("FLASK_PORT must be between 1 and 65535")
+        except (ValueError, TypeError):
+            errors.append("FLASK_PORT must be a valid integer")
+    
+    # Required environment
+    env = os.getenv('FLASK_ENVIRONMENT')
+    if not env:
+        errors.append("FLASK_ENVIRONMENT must be set")
+    elif env not in ['production', 'development']:
+        errors.append("FLASK_ENVIRONMENT must be 'production' or 'development'")
+    
+    if errors:
+        logger.critical("Configuration validation failed", extra={'errors': errors})
+        for error in errors:
+            logger.critical(f"Config error: {error}")
+        sys.exit(1)
+    
+    return {
+        'secret_key': secret_key,
+        'port': int(port_str),
+        'environment': env
+    }
+
+# Validate config immediately at startup
+config = validate_config()
 
 app = Flask(__name__)
-app.secret_key = passwords.app_secret_key
+app.secret_key = config['secret_key']
 
 app.permanent_session_lifetime = timedelta(days=31)
 
 ITALY_TZ = pytz.timezone('Europe/Rome')
 
+# Configure Flask app logger and Waitress logger
+app.logger.setLevel(logging.INFO)
+waitress_logger = logging.getLogger('waitress')
+waitress_logger.setLevel(logging.INFO)
+
 def get_db_connection():
     """Get database connection using Flask's g object for per-request connections."""
     if 'db' not in g:
-        g.db = sqlite3.connect(passwords.DB_FILE_PATH, timeout=30.0)
+        g.db = sqlite3.connect(DB_FILE_PATH, timeout=30.0)
         g.db.row_factory = sqlite3.Row  # Enable dict-like access to rows
         # Enable foreign key constraints
         g.db.execute("PRAGMA foreign_keys = ON")
@@ -132,8 +228,11 @@ def login():
         username = request.form['username']
         password = request.form['password']
         
+        logger.info("Login attempt", extra={'username': username})
+        
         validation_errors = validate_user_data(username, password)
         if validation_errors:
+            logger.warning("Login failed: validation error", extra={'username': username, 'errors': validation_errors})
             return render_template('login.html', error="Invalid username or password")
         
         conn = get_db_connection()
@@ -146,17 +245,21 @@ def login():
                 session.permanent = True
                 session['user_id'] = user['id']
                 session['username'] = username
+                logger.info("Login successful", extra={'username': username, 'user_id': user['id']})
                 return redirect(url_for('dashboard'))
             else:
+                logger.warning("Login failed: invalid credentials", extra={'username': username})
                 return render_template('login.html', error="Invalid username or password")
         except sqlite3.Error as e:
-            app.logger.error(f"Database error during login: {e}")
+            logger.error("Database error during login", extra={'username': username, 'error': str(e)})
             return render_template('login.html', error="Database error: Unable to process login")
     
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
+    username = session.get('username', 'unknown')
+    logger.info("User logged out", extra={'username': username})
     session.clear()
     return redirect(url_for('login'))
 
@@ -175,6 +278,11 @@ def dashboard():
             selected_date = today
     else:
         selected_date = today
+    
+    logger.info("Dashboard accessed", extra={
+        'username': session['username'], 
+        'selected_date': selected_date.isoformat()
+    })
     
     conn = get_db_connection()
     try:
@@ -202,7 +310,11 @@ def dashboard():
                     'formatted_time': formatted_time
                 })
             except ValueError:
-                app.logger.warning(f"Skipping meal ID {row['id']} with corrupt time format: '{meal_time}' for user {session['user_id']}")
+                logger.warning("Skipping meal with corrupt time format", extra={
+                    'meal_id': row['id'], 
+                    'meal_time': meal_time, 
+                    'user_id': session['user_id']
+                })
                 continue
         
         # Get selected date's totals
@@ -216,7 +328,10 @@ def dashboard():
         selected_proteins = float(totals[1])
         
     except sqlite3.Error as e:
-        app.logger.error(f"Database error in dashboard: {e}")
+        logger.error("Database error in dashboard", extra={
+            'username': session['username'], 
+            'error': str(e)
+        })
         # Provide fallback data to prevent page crash
         selected_meals = []
         selected_calories = 0.0
@@ -241,10 +356,22 @@ def api_add_meal():
     meal_date = request.form['meal_date']
     meal_time = request.form['meal_time']
     
+    logger.info("Add meal attempt", extra={
+        'username': session['username'],
+        'proteins': proteins_str,
+        'calories': calories_str,
+        'meal_date': meal_date,
+        'meal_time': meal_time
+    })
+    
     # Validate the input data
     proteins, calories, validation_errors = validate_meal_data(proteins_str, calories_str)
     
     if validation_errors:
+        logger.warning("Add meal failed: validation error", extra={
+            'username': session['username'],
+            'errors': validation_errors
+        })
         return jsonify({
             "success": False,
             "field_errors": validation_errors
@@ -253,6 +380,10 @@ def api_add_meal():
     # Validate date and time formats
     datetime_errors = validate_date_time(meal_date, meal_time)
     if datetime_errors:
+        logger.warning("Add meal failed: datetime validation error", extra={
+            'username': session['username'],
+            'errors': datetime_errors
+        })
         return jsonify({
             "success": False,
             "field_errors": datetime_errors
@@ -269,6 +400,13 @@ def api_add_meal():
         # Get the inserted meal ID
         meal_id = cursor.lastrowid
         conn.commit()
+        
+        logger.info("Meal added successfully", extra={
+            'username': session['username'],
+            'meal_id': meal_id,
+            'proteins': float(proteins),
+            'calories': int(calories)
+        })
         
         # Get updated totals for the date
         cursor.execute("""
@@ -298,13 +436,19 @@ def api_add_meal():
             }
         })
     except sqlite3.IntegrityError as e:
-        app.logger.error(f"Database integrity error adding meal: {e}")
+        logger.error("Database integrity error adding meal", extra={
+            'username': session['username'], 
+            'error': str(e)
+        })
         return jsonify({
             "success": False,
             "field_errors": {"general": "Database error: Invalid data provided"}
         }), 400
     except sqlite3.Error as e:
-        app.logger.error(f"Database error adding meal: {e}")
+        logger.error("Database error adding meal", extra={
+            'username': session['username'], 
+            'error': str(e)
+        })
         return jsonify({
             "success": False,
             "field_errors": {"general": "Database error: Unable to save meal"}
@@ -315,6 +459,12 @@ def api_add_meal():
 def api_delete_meal(meal_id):
     meal_date = request.form.get('meal_date')
     
+    logger.info("Delete meal attempt", extra={
+        'username': session['username'],
+        'meal_id': meal_id,
+        'meal_date': meal_date
+    })
+    
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -324,6 +474,10 @@ def api_delete_meal(meal_id):
         meal_data = cursor.fetchone()
         
         if not meal_data:
+            logger.warning("Delete meal failed: meal not found", extra={
+                'username': session['username'],
+                'meal_id': meal_id
+            })
             return jsonify({
                 "success": False,
                 "error": "Meal not found"
@@ -336,6 +490,13 @@ def api_delete_meal(meal_id):
         cursor.execute("DELETE FROM meals WHERE id = ? AND user_id = ?", 
                      (meal_id, session['user_id']))
         conn.commit()
+        
+        logger.info("Meal deleted successfully", extra={
+            'username': session['username'],
+            'meal_id': meal_id,
+            'deleted_proteins': deleted_proteins,
+            'deleted_calories': deleted_calories
+        })
         
         # Get updated totals for the date
         cursor.execute("""
@@ -359,7 +520,11 @@ def api_delete_meal(meal_id):
             }
         })
     except sqlite3.Error as e:
-        app.logger.error(f"Database error deleting meal: {e}")
+        logger.error("Database error deleting meal", extra={
+            'username': session['username'], 
+            'meal_id': meal_id,
+            'error': str(e)
+        })
         return jsonify({
             "success": False,
             "error": "Database error: Unable to delete meal"
@@ -372,6 +537,13 @@ def view_range():
     end_date = request.args.get('end_date')
     page = int(request.args.get('page', 1))
     per_page = 30  # Days per page
+    
+    logger.info("View range accessed", extra={
+        'username': session['username'],
+        'start_date': start_date,
+        'end_date': end_date,
+        'page': page
+    })
     
     range_data = None
     avg_calories = 0
@@ -408,7 +580,10 @@ def view_range():
                         'meal_count': row['meal_count']
                     })
                 except ValueError:
-                    app.logger.warning(f"Skipping date record with corrupt date format: '{row['meal_date']}' for user {session['user_id']}")
+                    logger.warning("Skipping date record with corrupt date format", extra={
+                        'meal_date': row['meal_date'], 
+                        'user_id': session['user_id']
+                    })
                     continue
             
             if all_data:
@@ -422,8 +597,18 @@ def view_range():
                 offset = (page - 1) * per_page
                 range_data = all_data[offset:offset + per_page]
                 
+                logger.info("View range data retrieved", extra={
+                    'username': session['username'],
+                    'total_days': total_days,
+                    'avg_calories': avg_calories,
+                    'avg_proteins': avg_proteins
+                })
+                
         except sqlite3.Error as e:
-            app.logger.error(f"Database error in view_range: {e}")
+            logger.error("Database error in view_range", extra={
+                'username': session['username'], 
+                'error': str(e)
+            })
             # Provide fallback empty data
             range_data = None
     
@@ -440,10 +625,12 @@ def view_range():
                          username=session['username'])
 
 if __name__ == '__main__':
-    match passwords.flask_environment:
-        case 'production':
-            serve(app, host='127.0.0.1', port=passwords.flask_port)
-        case 'development':
-            app.run(debug=True, host='127.0.0.1', port=passwords.flask_port)
-        case _:
-            print("Please select an appropriate passwords.flask_environment")
+    logger.info("Frediet application starting", extra={
+        'port': config['port'],
+        'environment': config['environment']
+    })
+    
+    if config['environment'] == 'production':
+        serve(app, host='0.0.0.0', port=config['port'])
+    else:
+        app.run(debug=True, host='0.0.0.0', port=config['port'])

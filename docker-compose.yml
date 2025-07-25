@@ -1,0 +1,19 @@
+services:
+  frediet:
+    build: .
+    ports:
+      - "127.0.0.1:${FLASK_PORT}:${FLASK_PORT}"
+    volumes:
+      - frediet_data:/app/data
+    env_file:
+      - .env
+    restart: unless-stopped
+    user: "1000:1000"
+    logging:
+      driver: json-file
+      options:
+        max-size: "250k"
+        max-file: "4"
+
+volumes:
+  frediet_data:

@@ -1,21 +1,25 @@
-#!/usr/bin/env python3
 """
 Database initialization script for Frediet SQLite database.
 Run this script to create a fresh, empty database with proper schema.
 """
 
 import sqlite3
-import passwords
+import logging
+import os
+
+DB_FILE_PATH = "/app/data/frediet.db"
+
+logger = logging.getLogger(__name__)
 
 def create_database():
     """Create the SQLite database with proper schema, constraints, and indexes."""
     
-    conn = sqlite3.connect(passwords.DB_FILE_PATH, timeout=30.0)
+    logger.info("Starting database initialization", extra={'db_path': DB_FILE_PATH})
+    
+    conn = sqlite3.connect(DB_FILE_PATH, timeout=5.0)
     try:
-        # Enable foreign key constraints
         conn.execute("PRAGMA foreign_keys = ON")
         
-        # Create users table
         conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,7 +30,6 @@ def create_database():
             )
         """)
         
-        # Create meals table  
         conn.execute("""
             CREATE TABLE IF NOT EXISTS meals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,7 +46,6 @@ def create_database():
             )
         """)
         
-        # Create indexes for better query performance
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_user_date 
             ON meals (user_id, meal_date)
@@ -55,76 +57,30 @@ def create_database():
         """)
         
         conn.commit()
-        print(f"✅ Database '{passwords.DB_FILE_PATH}' created successfully!")
+        logger.info("Database created successfully", extra={
+            'db_path': DB_FILE_PATH,
+            'tables': ['users', 'meals'],
+            'indexes': ['idx_user_date', 'idx_meal_date']
+        })
+        print(f"✅ Database '{DB_FILE_PATH}' created successfully!")
         print("📊 Schema created with tables: users, meals")
         print("🔗 Indexes created: idx_user_date, idx_meal_date")
         print("🔒 Foreign key constraints enabled")
         print("📝 Database is ready for use - completely empty, no default users")
         
     except sqlite3.Error as e:
+        logger.error("Error creating database", extra={'db_path': DB_FILE_PATH, 'error': str(e)})
         print(f"❌ Error creating database: {e}")
         conn.rollback()
     finally:
         conn.close()
 
-def check_database():
-    """Check if database exists and show basic info."""
-    try:
-        conn = sqlite3.connect(passwords.DB_FILE_PATH, timeout=30.0)
-        cursor = conn.cursor()
-        
-        # Check if tables exist
-        cursor.execute("""
-            SELECT name FROM sqlite_master 
-            WHERE type='table' AND name NOT LIKE 'sqlite_%'
-        """)
-        tables = cursor.fetchall()
-        
-        if not tables:
-            print(f"❌ Database '{passwords.DB_FILE_PATH}' exists but has no tables")
-            return False
-            
-        print(f"✅ Database '{passwords.DB_FILE_PATH}' exists")
-        print(f"📊 Tables found: {', '.join([table[0] for table in tables])}")
-        
-        # Count users and meals
-        cursor.execute("SELECT COUNT(*) FROM users")
-        user_count = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM meals")
-        meal_count = cursor.fetchone()[0]
-        
-        print(f"👥 Users: {user_count}")
-        print(f"🍽️ Meals: {meal_count}")
-        
-        conn.close()
-        return True
-        
-    except sqlite3.Error as e:
-        print(f"❌ Error checking database: {e}")
-        return False
-
 if __name__ == "__main__":
-    import sys
-    import os
+
+    print("🗄️ Frediet database initialization...")
     
-    # Check if passwords.py exists
-    if not os.path.exists("passwords.py"):
-        print("❌ passwords.py not found!")
-        print("📝 Please copy passwords.example.py to passwords.py and configure it")
-        sys.exit(1)
-    
-    if len(sys.argv) > 1 and sys.argv[1] == "check":
-        check_database()
+    if os.path.exists(DB_FILE_PATH):
+        print(f"✅ Database '{DB_FILE_PATH}' already exists, skipping initialization")
     else:
-        print("🗄️ Initializing Frediet SQLite database...")
-        
-        # Check if database already exists
-        if os.path.exists(passwords.DB_FILE_PATH):
-            response = input(f"⚠️  Database '{passwords.DB_FILE_PATH}' already exists. Overwrite? (y/N): ")
-            if response.lower() != 'y':
-                print("❌ Aborted")
-                sys.exit(1)
-            os.remove(passwords.DB_FILE_PATH)
-            print(f"🗑️ Removed existing database")
-        
+        print(f"📊 Database not found. Creating new database...")
         create_database()
