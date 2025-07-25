@@ -1,5 +1,8 @@
 FROM python:3.13.5-slim-bookworm
 
+# Install sqlite3 for database console access
+RUN apt-get update && apt-get install -y sqlite3 && rm -rf /var/lib/apt/lists/*
+
 # Create app user with home directory for console access
 RUN groupadd -g 1000 frediet && \
     useradd --create-home --no-log-init -u 1000 -g 1000 frediet
